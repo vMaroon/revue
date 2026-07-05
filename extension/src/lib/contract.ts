@@ -35,6 +35,10 @@ export type BgRequest = {
   body?: unknown;
 };
 
+/** Sent by the panel; the service worker opens the daemon control page (it
+ *  holds the port + token, so the token never enters the content script). */
+export type OpenControlMessage = { kind: 'open-control' };
+
 export type BgResponse =
   | { ok: true; status: number; data: unknown }
   | { ok: false; error: string; status?: number };
@@ -76,6 +80,8 @@ export interface DaemonClient {
   chat(id: string, cid: string, message: string): Promise<ChatResponse>;
   publishDryRun(id: string): Promise<PublishValidation>;
   publish(id: string): Promise<PublishResult>;
+  /** Opens the daemon control page in a new tab (via the service worker). */
+  openControlPage(): void;
   /** Opens the SSE relay; returns an unsubscribe function. */
   subscribe(id: string, onEvent: (e: RevueEvent) => void, onStatus?: (s: SsePortMessage & { kind: 'sse-status' }) => void): () => void;
 }

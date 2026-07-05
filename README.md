@@ -53,8 +53,8 @@ converging on substance and wording. Nothing touches GitHub until you click
 | triage | claude-haiku-4-5  | Classifies the PR, picks which finders are worth running |
 | find   | claude-sonnet-5   | Parallel finders per dimension (correctness, concurrency, API contracts, tests, security, simplicity) with read access to the checked-out repo |
 | verify | claude-opus-4-8   | Adversarial pass per finding — tries to *refute* it against the repo; refuted findings are dropped |
-| draft  | claude-fable-5    | Rewrites surviving findings as review comments under `preferences/voice.md` + drafts the review summary |
-| chat   | claude-fable-5    | Per-comment conversations while you converge |
+| draft  | claude-opus-4-8   | Rewrites surviving findings as review comments under `preferences/voice.md` + drafts the review summary |
+| chat   | claude-opus-4-8   | Per-comment conversations while you converge |
 
 Only verified findings get drafted; cheap models do the broad scanning,
 expensive models do judgment and voice. Models are configurable per stage in

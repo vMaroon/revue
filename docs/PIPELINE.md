@@ -143,7 +143,7 @@ server handling.
 
 ## Efficiency notes
 
-- Tiered models: haiku triages, sonnet scans, opus verifies, fable writes.
+- Tiered models: haiku triages, sonnet scans, opus verifies and writes.
 - Finders run in parallel (semaphore-capped); verifiers run in parallel as
   findings arrive from dedupe.
 - Refuted findings never reach the expensive voice stage.

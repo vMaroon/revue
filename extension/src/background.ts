@@ -65,11 +65,25 @@ async function handleHttp(req: BgRequest): Promise<BgResponse> {
   return { ok: false, error, status: res.status };
 }
 
+async function openControlPage(): Promise<void> {
+  const settings = await getSettings();
+  const url =
+    `http://127.0.0.1:${settings.daemonPort}/control` +
+    (settings.token !== '' ? `?token=${encodeURIComponent(settings.token)}` : '');
+  await chrome.tabs.create({ url });
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  const req = message as Partial<BgRequest> | undefined;
-  if (!req || req.kind !== 'http') return;
-  void handleHttp(req as BgRequest).then(sendResponse);
-  return true; // keep sendResponse valid across the async work
+  const msg = message as { kind?: string } | undefined;
+  if (msg?.kind === 'http') {
+    void handleHttp(message as BgRequest).then(sendResponse);
+    return true; // keep sendResponse valid across the async work
+  }
+  if (msg?.kind === 'open-control') {
+    void openControlPage();
+    return; // fire-and-forget, no response
+  }
+  return;
 });
 
 // ---------------------------------------------------------------------------

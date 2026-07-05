@@ -268,6 +268,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
         h('span', { class: 'rv-logo' }, 'Revue'),
         h('span', { class: 'rv-pr-ref' }, `${pr.owner}/${pr.repo} #${pr.number}`),
         draft ? h('span', { class: `rv-status-chip rv-status-chip-${draft.status}` }, draft.status) : null,
+        h('button', { class: 'rv-icon-btn', title: 'Tune the pipeline (control page)', onclick: () => client.openControlPage() }, 'tune'),
         h('button', { class: 'rv-icon-btn', title: 'Close panel', onclick: () => toggle() }, 'x'),
       ),
     );

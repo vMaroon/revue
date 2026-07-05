@@ -9,7 +9,8 @@ http://127.0.0.1:7388/control?token=<secret>
 
 The daemon prints this URL (with the token filled in) on startup. The `?token=`
 is optional — the page also accepts the token in a field and remembers it in
-`localStorage`.
+`localStorage`. The extension panel also has a **tune** button in its header
+that opens this page (the service worker fills in the port and token).
 
 ## What it tunes
 

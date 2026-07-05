@@ -72,8 +72,8 @@ const defaults: RevueConfig = {
     triage: 'claude-haiku-4-5',
     finder: 'claude-sonnet-5',
     verifier: 'claude-opus-4-8',
-    voice: 'claude-fable-5',
-    chat: 'claude-fable-5',
+    voice: 'claude-opus-4-8',
+    chat: 'claude-opus-4-8',
   },
   finders: ['correctness', 'concurrency', 'api-contracts', 'tests', 'security', 'simplicity'],
   // Concurrent agent subprocesses. Kept low by default: each finder is a

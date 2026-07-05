@@ -254,7 +254,6 @@ export const KNOWN_MODELS = [
   'claude-haiku-4-5',
   'claude-sonnet-5',
   'claude-opus-4-8',
-  'claude-fable-5',
 ] as const;
 
 // ---------------------------------------------------------------------------

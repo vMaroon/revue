@@ -115,6 +115,12 @@ export function createDaemonClient(): DaemonClient {
       return request<PublishResult>('POST', `/reviews/${encodeURIComponent(id)}/publish`, {});
     },
 
+    openControlPage() {
+      void chrome.runtime.sendMessage({ kind: 'open-control' }).catch(() => {
+        // service worker asleep or gone; nothing to surface
+      });
+    },
+
     subscribe(id, onEvent, onStatus) {
       let active = true;
       let delay = RECONNECT_MIN_MS;
