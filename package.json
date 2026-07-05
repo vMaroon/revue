@@ -1,0 +1,21 @@
+{
+  "name": "revue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "extension"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w server",
+    "mock": "REVUE_MOCK=1 npm run dev -w server",
+    "build": "npm run build -w extension",
+    "watch:ext": "npm run watch -w extension",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w extension"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

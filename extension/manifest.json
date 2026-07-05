@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Revue — staged PR reviews",
+  "version": "0.1.0",
+  "description": "Overlay pipeline-drafted review comments on GitHub PRs; edit and chat with Claude per comment; publish as one review when converged.",
+  "permissions": ["storage"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["dist/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Toggle Revue panel"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

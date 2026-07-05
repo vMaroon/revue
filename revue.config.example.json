@@ -1,0 +1,14 @@
+{
+  "port": 7388,
+  "models": {
+    "triage": "claude-haiku-4-5",
+    "finder": "claude-sonnet-5",
+    "verifier": "claude-opus-4-8",
+    "voice": "claude-fable-5",
+    "chat": "claude-fable-5"
+  },
+  "finders": ["correctness", "concurrency", "api-contracts", "tests", "security", "simplicity"],
+  "maxParallel": 2,
+  "dataDir": "~/.revue",
+  "mock": false
+}

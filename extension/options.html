@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Revue settings</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --accent: #7c5cff;
+      --border: #8884;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+    }
+    main {
+      width: 100%;
+      max-width: 460px;
+      padding: 32px 24px;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 4px;
+    }
+    .hint {
+      margin: 0 0 20px;
+      opacity: 0.75;
+    }
+    code {
+      font-size: 12px;
+      background: #8882;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin: 14px 0 4px;
+    }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      font: inherit;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: inherit;
+    }
+    input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+      border-color: transparent;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    button {
+      font: inherit;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+    button[type="submit"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    #status {
+      margin-top: 16px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    #status.ok { border-color: #2da44e; color: #2da44e; }
+    #status.error { border-color: #cf222e; color: #cf222e; }
+    #status.info { opacity: 0.75; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Revue</h1>
+    <p class="hint">
+      The daemon prints its token at startup; it also lives in
+      <code>~/.revue/secret</code>.
+    </p>
+    <form id="settings-form">
+      <label for="port">Daemon port</label>
+      <input id="port" type="number" min="1" max="65535" required>
+      <label for="token">Token</label>
+      <input id="token" type="password" autocomplete="off" spellcheck="false">
+      <div class="row">
+        <button type="submit" id="save">Save</button>
+        <button type="button" id="test">Test connection</button>
+      </div>
+    </form>
+    <div id="status" hidden></div>
+  </main>
+  <script src="dist/options.js"></script>
+</body>
+</html>
