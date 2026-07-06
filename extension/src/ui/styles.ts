@@ -144,6 +144,11 @@ textarea.rv-input { resize: vertical; min-height: 64px; font-family: inherit; }
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
   color: var(--rv-fg-muted); margin: 0 0 6px;
 }
+.rv-section-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rv-cost-total {
+  font-family: var(--rv-mono); font-size: 12px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; color: var(--rv-accent);
+}
 
 /* ---- banners ---- */
 .rv-banner { border-radius: 6px; padding: 7px 9px; font-size: 12px; margin-bottom: 8px; border: 1px solid; }
@@ -159,7 +164,8 @@ textarea.rv-input { resize: vertical; min-height: 64px; font-family: inherit; }
 .rv-stage-error .rv-stage-dot { background: var(--rv-danger); }
 .rv-stage-name { font-weight: 600; width: 52px; flex: none; }
 .rv-stage-pending .rv-stage-name { color: var(--rv-fg-muted); font-weight: 400; }
-.rv-stage-detail { color: var(--rv-fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-stage-detail { color: var(--rv-fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.rv-stage-cost { font-family: var(--rv-mono); font-size: 11px; color: var(--rv-fg-muted); flex: none; }
 .rv-stage-findings { font-size: 12px; margin-top: 2px; }
 @keyframes rv-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 

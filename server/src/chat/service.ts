@@ -51,6 +51,11 @@ export function createChatService(): ChatService {
         comment.chatSessionId = result.sessionId;
       }
       comment.updatedAt = reply.at;
+      // Fold the chat's cost into the review total and push the updated draft.
+      if (result.costUsd !== undefined && result.costUsd > 0) {
+        draft.costUsd = (draft.costUsd ?? 0) + result.costUsd;
+        deps.emit({ type: 'review', reviewId: draft.id, draft });
+      }
       deps.save();
       deps.emit({
         type: 'chat-done',

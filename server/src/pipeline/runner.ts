@@ -55,6 +55,15 @@ async function run(draft: ReviewDraft, deps: PipelineDeps): Promise<void> {
     save();
   };
 
+  // Attribute each agent call's cost to its stage and the review total. The
+  // stage's costUsd rides out on its 'done' event; the total on the final review.
+  const addCost = (stage: PipelineStage) => (usd: number): void => {
+    if (usd <= 0) return;
+    draft.costUsd = (draft.costUsd ?? 0) + usd;
+    const progress = stageOf(stage);
+    progress.costUsd = (progress.costUsd ?? 0) + usd;
+  };
+
   try {
     const { config, snapshot } = deps;
     draft.status = 'running';
@@ -78,6 +87,7 @@ async function run(draft: ReviewDraft, deps: PipelineDeps): Promise<void> {
           readOnly: true,
           maxTurns: 1,
           tag: 'triage',
+            onCost: addCost('triage'),
         },
         TriageOut,
         'TriageOut',
@@ -103,6 +113,7 @@ async function run(draft: ReviewDraft, deps: PipelineDeps): Promise<void> {
             readOnly: true,
             maxTurns: 30,
             tag: 'finder',
+            onCost: addCost('find'),
           },
           FinderOut,
           'FinderOut',
@@ -162,6 +173,7 @@ async function run(draft: ReviewDraft, deps: PipelineDeps): Promise<void> {
             readOnly: true,
             maxTurns: 30,
             tag: 'verify',
+            onCost: addCost('verify'),
           },
           VerifyOut,
           'VerifyOut',
@@ -206,6 +218,7 @@ async function run(draft: ReviewDraft, deps: PipelineDeps): Promise<void> {
         readOnly: true,
         maxTurns: 1,
         tag: 'voice',
+            onCost: addCost('draft'),
       },
       VoiceOut,
       'VoiceOut',

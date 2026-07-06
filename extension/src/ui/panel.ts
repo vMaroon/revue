@@ -331,7 +331,16 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
     if (!draft) return;
     const show = draft.status === 'running' || draft.stages.some((s) => s.status !== 'pending');
     if (!show) return;
-    const list = h('div', { class: 'rv-section' }, h('div', { class: 'rv-section-title' }, 'Pipeline'));
+    const total = draft.costUsd;
+    const title = h(
+      'div',
+      { class: 'rv-section-title rv-section-title-row' },
+      h('span', {}, 'Pipeline'),
+      total !== undefined && total > 0
+        ? h('span', { class: 'rv-cost-total', title: 'Total model cost of this review' }, formatCost(total))
+        : null,
+    );
+    const list = h('div', { class: 'rv-section' }, title);
     for (const def of STAGES) {
       const p = draft.stages.find((s) => s.stage === def.id);
       const status = p?.status ?? 'pending';
@@ -342,6 +351,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
           h('span', { class: 'rv-stage-dot' }),
           h('span', { class: 'rv-stage-name' }, def.label),
           p?.detail ? h('span', { class: 'rv-stage-detail', title: p.detail }, p.detail) : null,
+          p?.costUsd ? h('span', { class: 'rv-stage-cost' }, formatCost(p.costUsd)) : null,
         ),
       );
     }
@@ -472,6 +482,11 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
     }
     card.setAnchored(overlayCards.get(c.id)?.host.isConnected ?? false);
     return card;
+  }
+
+  function formatCost(usd: number): string {
+    if (usd < 0.01) return '<$0.01';
+    return `$${usd.toFixed(2)}`;
   }
 
   function firstBodyLine(body: string): string {

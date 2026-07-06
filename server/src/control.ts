@@ -147,13 +147,19 @@ function renderModels() {
   for (const key of Object.keys(MODEL_LABELS)) {
     const wrap = document.createElement('div');
     const label = document.createElement('label'); label.textContent = MODEL_LABELS[key]; label.htmlFor = 'model_' + key;
-    const sel = document.createElement('input'); sel.type = 'text'; sel.id = 'model_' + key;
-    sel.setAttribute('list', 'modelList'); sel.value = data.config.models[key] || '';
+    const sel = document.createElement('select'); sel.id = 'model_' + key;
+    const current = data.config.models[key] || '';
+    const options = data.knownModels.slice();
+    // Preserve a configured value that isn't in the usable set so it isn't lost.
+    if (current && !options.includes(current)) options.unshift(current);
+    for (const m of options) {
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = m;
+      if (m === current) opt.selected = true;
+      sel.appendChild(opt);
+    }
     wrap.appendChild(label); wrap.appendChild(sel); box.appendChild(wrap);
   }
-  let dl = $('modelList');
-  if (!dl) { dl = document.createElement('datalist'); dl.id = 'modelList'; document.body.appendChild(dl); }
-  dl.innerHTML = data.knownModels.map((m) => '<option value="' + m + '">').join('');
 }
 
 function renderFinders() {

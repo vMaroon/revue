@@ -120,6 +120,7 @@ async function runQuery(opts: AgentRunOptions, timeoutMs: number): Promise<Agent
     'agent',
     `done ${label} in ${Date.now() - started}ms${costUsd !== undefined ? ` ($${costUsd.toFixed(4)})` : ''}`,
   );
+  if (costUsd !== undefined && costUsd > 0) opts.onCost?.(costUsd);
   return {
     text,
     ...(sessionId !== undefined ? { sessionId } : {}),
@@ -251,11 +252,22 @@ const MOCK_CHAT_REPLY =
   '<revised-comment>The error from the second call is discarded, so callers observe success ' +
   'while the write was only partially applied. Wonder if we could return the joined error here.</revised-comment>';
 
+// Plausible per-stage costs so the cost display is exercisable in mock mode.
+const MOCK_COST: Record<string, number> = {
+  triage: 0.004,
+  finder: 0.021,
+  verify: 0.016,
+  voice: 0.032,
+  chat: 0.006,
+  learn: 0.002,
+};
+
 function createMockInvoker(config: RevueConfig): AgentInvoker {
   let verifyCalls = 0;
   return {
     async run(opts: AgentRunOptions): Promise<AgentResult> {
       const sessionId = opts.resume ?? `mock-${randomUUID()}`;
+      const costUsd = MOCK_COST[opts.tag ?? ''] ?? 0;
 
       if (opts.tag === 'chat') {
         // Stream a few chunks so chat-delta paths exercise.
@@ -264,7 +276,8 @@ function createMockInvoker(config: RevueConfig): AgentInvoker {
           await sleep(60);
           if (opts.onDelta) opts.onDelta(chunk);
         }
-        return { text: MOCK_CHAT_REPLY, sessionId, costUsd: 0 };
+        if (costUsd > 0) opts.onCost?.(costUsd);
+        return { text: MOCK_CHAT_REPLY, sessionId, costUsd };
       }
 
       await sleep(300);
@@ -333,7 +346,8 @@ function createMockInvoker(config: RevueConfig): AgentInvoker {
         default:
           text = 'mock reply';
       }
-      return { text, sessionId, costUsd: 0 };
+      if (costUsd > 0) opts.onCost?.(costUsd);
+      return { text, sessionId, costUsd };
     },
   };
 }

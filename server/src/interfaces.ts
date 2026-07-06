@@ -122,6 +122,8 @@ export interface AgentRunOptions {
   maxTurns?: number;
   /** Streamed assistant text, when the SDK surfaces partial messages. */
   onDelta?: (text: string) => void;
+  /** Called once with this call's USD cost when the result arrives. */
+  onCost?: (usd: number) => void;
   /** Label used by the mock invoker to pick a canned response. */
   tag?: 'triage' | 'finder' | 'verify' | 'voice' | 'chat' | 'learn';
 }

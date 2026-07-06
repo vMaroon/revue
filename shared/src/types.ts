@@ -111,6 +111,8 @@ export interface StageProgress {
   detail?: string;
   startedAt?: string;
   endedAt?: string;
+  /** Accumulated model cost for this stage, USD. */
+  costUsd?: number;
 }
 
 export interface ReviewDraft {
@@ -125,6 +127,8 @@ export interface ReviewDraft {
   comments: DraftComment[];
   /** Findings killed by verification, kept for transparency. */
   dropped: Finding[];
+  /** Total model cost of this review (pipeline plus per-comment chats), USD. */
+  costUsd?: number;
   /** True when the PR head moved since the pipeline ran. */
   stale?: boolean;
   error?: string;
