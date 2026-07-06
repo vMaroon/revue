@@ -1,4 +1,8 @@
+<sub>[revue](../README.md) · docs · **Architecture**</sub>
+
 # Architecture
+
+> Two processes, one shared type package — and the reasons each decision went the way it did.
 
 Two processes, one shared type package:
 
@@ -108,3 +112,7 @@ the live diff regardless, so stale drafts fail safe.
 | learning | `server/src/learn/{service,prompts}.ts` |
 | ext core | `extension/src/{background,content,daemon,anchor,options}.ts`, `extension/options.html` |
 | ext ui | `extension/src/ui/{panel,card,chat,hunk,styles}.ts` |
+
+---
+
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>

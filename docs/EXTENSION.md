@@ -1,4 +1,8 @@
+<sub>[revue](../README.md) · docs · **Extension**</sub>
+
 # Extension internals
+
+> How the MV3 extension anchors AI drafts onto GitHub's diff DOM without ever breaking the page.
 
 MV3, vanilla TypeScript, esbuild-bundled. Module contracts:
 `extension/src/lib/contract.ts` (authoritative for exported shapes).
@@ -115,3 +119,7 @@ the open thread). Edits are optimistic with server echo via events.
 
 Fields: daemon port, token; **Test connection** button hits `/health` via
 the SW and reports version/ghUser/mock. Stored in `chrome.storage.sync`.
+
+---
+
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>

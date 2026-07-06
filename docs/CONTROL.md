@@ -1,4 +1,8 @@
+<sub>[revue](../README.md) · docs · **Control**</sub>
+
 # Control page
+
+> Tune models, finders, concurrency, and the review voice live — no file editing, no restart.
 
 A daemon-served page for tuning the pipeline without editing files by hand.
 Open it at:
@@ -49,3 +53,7 @@ it carries no secrets). `GET`/`PUT /config` are token-gated like every other
 route, and the page supplies the token on those calls. Validation rejects an
 out-of-range `maxParallel` (1-16), a sub-10s timeout, empty model ids, and
 unknown finder names.
+
+---
+
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>
