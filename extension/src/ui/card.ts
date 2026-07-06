@@ -15,6 +15,9 @@ export interface CardContext {
   onLocalUpdate: (comment: DraftComment) => void;
   /** Scrolls the diff row for this comment into view. */
   scrollTo: () => void;
+  /** GitHub blob URL for an evidence location at the reviewed head commit, or
+   *  undefined when the PR head isn't known yet. */
+  fileUrl: (path: string, line?: number) => string | undefined;
   /** Start expanded (panel-only fallback); overlay cards start collapsed. */
   startExpanded?: boolean;
 }
@@ -181,10 +184,15 @@ export function createCard(comment: DraftComment, ctx: CardContext): CardHandle 
     box.appendChild(evRow('Consequence', f.consequence));
     if (f.suggestion) box.appendChild(evRow('Suggestion', f.suggestion));
     for (const ev of f.evidence) {
+      const loc = ev.line !== undefined ? `${ev.path}:${ev.line}` : ev.path;
+      const url = ctx.fileUrl(ev.path, ev.line);
+      const locEl = url
+        ? h('a', { class: 'rv-evidence-loc', href: url, target: '_blank', rel: 'noopener noreferrer' }, loc)
+        : h('span', { class: 'rv-evidence-loc' }, loc);
       const item = h(
         'div',
         { class: 'rv-evidence-item' },
-        h('span', { class: 'rv-evidence-loc' }, ev.line !== undefined ? `${ev.path}:${ev.line}` : ev.path),
+        locEl,
         h('div', { class: 'rv-evidence-note' }, ev.note),
       );
       if (ev.excerpt) {

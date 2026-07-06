@@ -286,6 +286,8 @@ textarea.rv-input { resize: vertical; min-height: 64px; font-family: inherit; }
 .rv-evidence-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .rv-evidence-item { border-left: 2px solid var(--rv-border); padding-left: 8px; margin: 2px 0; }
 .rv-evidence-loc { font-family: var(--rv-mono); font-size: 11px; color: var(--rv-accent); display: block; }
+a.rv-evidence-loc { text-decoration: none; width: fit-content; }
+a.rv-evidence-loc:hover { text-decoration: underline; }
 .rv-evidence-note { font-size: 12px; }
 .rv-evidence-meta { color: var(--rv-fg-muted); font-size: 11px; font-family: var(--rv-mono); }
 
