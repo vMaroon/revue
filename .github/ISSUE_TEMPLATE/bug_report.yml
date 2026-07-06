@@ -1,0 +1,42 @@
+name: Bug report
+description: Something in revue behaves incorrectly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Extension / overlay
+        - Daemon / pipeline
+        - Publish to GitHub
+        - Control page
+        - Setup / auth
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A PR URL, a config, or the sequence of clicks. Redact anything private.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Daemon logs
+      description: Relevant lines from the daemon (run with REVUE_DEBUG=1). Redact tokens and the shared secret.
+      render: shell
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "node -v, OS, Chrome version, revue version"
+    validations:
+      required: true

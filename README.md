@@ -5,11 +5,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/vMaroon/revue/actions/workflows/ci.yml"><img src="https://github.com/vMaroon/revue/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-D97757.svg?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/node-20%2B-D97757.svg?style=flat-square" alt="Node 20+">
   <img src="https://img.shields.io/badge/TypeScript-strict-D97757.svg?style=flat-square" alt="TypeScript">
   <img src="https://img.shields.io/badge/built%20with-Claude%20Agent%20SDK-D97757.svg?style=flat-square" alt="Claude Agent SDK">
-  <img src="https://img.shields.io/badge/PRs-welcome-D97757.svg?style=flat-square" alt="PRs welcome">
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-D97757.svg?style=flat-square" alt="PRs welcome"></a>
 </p>
 
 **A friendly claw for your pull requests.** Draft your whole review privately,
@@ -37,7 +38,8 @@ npm run build     # bundle the extension into extension/dist
 npm run dev       # start the local daemon on 127.0.0.1:7388
 ```
 
-Load the extension in Chrome:
+Load the extension in Chrome (or grab a pre-built zip from
+[Releases](https://github.com/vMaroon/revue/releases) and unzip it instead of building):
 
 1. `chrome://extensions` → enable **Developer mode** → **Load unpacked** → pick the `extension/` directory.
 2. Open the extension's options page, paste the token the daemon printed on startup
@@ -151,6 +153,22 @@ voice and priorities the pipeline enforces.
 | [API](docs/API.md) | The daemon's HTTP + SSE surface, auth, and error contract |
 | [CONTROL](docs/CONTROL.md) | The live tuning page — models, finders, concurrency, voice |
 | [LEARNING](docs/LEARNING.md) | How corrections become durable lessons for future reviews |
+
+## Roadmap
+
+Rough order, not a promise. Issues and PRs against any of these are welcome.
+
+- **Chrome Web Store listing** so install is one click instead of load-unpacked.
+- **One-command daemon start** (`npx revue`) that provisions the secret and prints the extension token.
+- **GitLab and Bitbucket** overlays behind the same publish-once model.
+- **Reviewer presets** — shareable `voice.md` / `priorities.md` bundles for a team.
+- **Wider pipeline test coverage** as the finder/verify stages grow.
+
+## Contributing
+
+Setup, the pre-push checks, and where things live are in [CONTRIBUTING](CONTRIBUTING.md).
+Security reports go through the private channel in [SECURITY](SECURITY.md), not public issues.
+Changes are tracked in [CHANGELOG](CHANGELOG.md).
 
 ## License
 
