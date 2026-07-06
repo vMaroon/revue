@@ -56,6 +56,12 @@ export function controlPage(): string {
   .tokrow { display:flex; gap:8px; align-items:center; }
   .tokrow input { flex:1; }
   .hidden { display:none; }
+  .steps li { margin:8px 0; }
+  #welcomeCard { border-color:var(--accent); }
+  details { margin:10px 0; }
+  summary { cursor:pointer; font-weight:600; font-size:13px; }
+  .obs { margin:8px 0 8px 14px; }
+  .quote { color:var(--muted); font-size:12.5px; margin:2px 0 2px 12px; }
 </style>
 </head>
 <body>
@@ -73,6 +79,16 @@ export function controlPage(): string {
       <button class="primary" id="connect">Connect</button>
     </div>
     <div class="status err" id="tokenErr"></div>
+  </div>
+
+  <div class="card hidden" id="welcomeCard">
+    <h2>Welcome &mdash; three steps and your reviewer is ready</h2>
+    <ol class="steps">
+      <li><strong>Load the extension.</strong> <span class="path">chrome://extensions</span> &rarr; enable Developer mode &rarr; <strong>Load unpacked</strong> &rarr; pick the repo's <span class="path">extension/</span> folder.</li>
+      <li><strong>Connect it.</strong> <button type="button" id="copyToken">Copy token</button> <span id="copied" class="status ok"></span> &mdash; then paste it into the extension's options page.</li>
+      <li><strong>Make it sound like you.</strong> <button type="button" class="primary" id="welcomeScan">Scan my public comments</button> &mdash; profiles your public PR reviews into a proposed voice you approve below.</li>
+    </ol>
+    <button type="button" id="welcomeDone">Done &mdash; hide this</button>
   </div>
 
   <form id="form" class="hidden">
@@ -113,6 +129,12 @@ export function controlPage(): string {
       <h2>Learned corrections</h2>
       <p class="hint">preferences/learnings.md &mdash; grown automatically when you edit or chat-correct a drafted comment, and fed back into future reviews. Prune or edit it here.</p>
       <textarea id="learnings" spellcheck="false"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Style bootstrap</h2>
+      <p class="hint">Profile your public GitHub PR comments &mdash; how you write, how you engage, what you review for &mdash; and propose voice/priorities rewrites grounded in quoted evidence. Nothing is written until you apply.</p>
+      <div id="styleBody"></div>
     </div>
   </form>
 </main>
@@ -207,6 +229,153 @@ function setStatus(msg, ok) {
 async function load() {
   data = await api('GET');
   fill();
+  refreshStyle();
+  // First-boot welcome (daemon auto-opens /control?...&welcome=1); one-time.
+  if (params.get('welcome') === '1' && !localStorage.getItem('revueWelcomeDone')) {
+    $('welcomeCard').classList.remove('hidden');
+  }
+}
+
+$('copyToken').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(token);
+    $('copied').textContent = 'copied';
+    setTimeout(() => { $('copied').textContent = ''; }, 2000);
+  } catch { $('copied').textContent = token; }
+};
+
+$('welcomeScan').onclick = () => {
+  startStyle();
+  $('styleBody').scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+$('welcomeDone').onclick = () => {
+  localStorage.setItem('revueWelcomeDone', '1');
+  $('welcomeCard').classList.add('hidden');
+};
+
+// --- Style bootstrap (docs/STYLE.md) ---------------------------------------
+
+let styleTimer = null;
+
+async function styleApi(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Revue-Token': token },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (res.status === 401) throw new Error('unauthorized');
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || ('HTTP ' + res.status));
+  return json;
+}
+
+// All style content renders via textContent: evidence quotes are raw corpus
+// text and must never reach innerHTML.
+function el(tag, text, cls) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (cls) node.className = cls;
+  return node;
+}
+
+function styleButton(label, primary, onclick) {
+  const b = el('button', label, primary ? 'primary' : '');
+  b.type = 'button'; // inside the form; default type would submit it
+  b.onclick = onclick;
+  return b;
+}
+
+function renderObservations(box, title, observations) {
+  const details = document.createElement('details');
+  details.appendChild(el('summary', title + ' (' + observations.length + ')'));
+  for (const o of observations) {
+    const item = el('div', '', 'obs');
+    item.appendChild(el('div', o.observation));
+    for (const q of o.evidence) item.appendChild(el('div', '“' + q + '”', 'quote'));
+    details.appendChild(item);
+  }
+  box.appendChild(details);
+}
+
+function renderStyle(s) {
+  clearTimeout(styleTimer);
+  const box = $('styleBody');
+  box.innerHTML = '';
+
+  if (s.status === 'idle') {
+    box.appendChild(styleButton('Scan my public comments', true, startStyle));
+  } else if (s.status === 'running') {
+    const p = s.progress;
+    const label =
+      p.phase === 'searching' ? 'Searching your PRs...' :
+      p.phase === 'collecting' ? ('Collecting comments... PR ' + p.prsScanned + (p.prsTotal ? '/' + p.prsTotal : '') + ' · ' + p.comments + ' comments') :
+      'Analyzing ' + p.comments + ' comments...';
+    box.appendChild(el('div', label, 'status'));
+    styleTimer = setTimeout(refreshStyle, 1500);
+  } else if (s.status === 'error') {
+    box.appendChild(el('div', s.message, 'status err'));
+    box.appendChild(styleButton('Re-run', true, startStyle));
+    box.appendChild(document.createTextNode(' '));
+    box.appendChild(styleButton('Discard', false, discardStyle));
+  } else if (s.status === 'ready') {
+    const st = s.stats;
+    const range = st.oldest && st.newest ? st.oldest.slice(0, 7) + ' to ' + st.newest.slice(0, 7) : '';
+    box.appendChild(el('div',
+      '@' + s.login + ' · ' + st.comments + ' comments (' + st.byRole.reviewer + ' reviewer / ' +
+      st.byRole.author + ' author) · ' + st.repos + ' repos' + (range ? ' · ' + range : '') +
+      (st.truncated ? ' · sample capped' : ''), 'hint'));
+    renderObservations(box, 'Linguistic', s.profile.linguistic);
+    renderObservations(box, 'Interactional', s.profile.interactional);
+    renderObservations(box, 'Technical priorities', s.profile.technical);
+    if (s.profile.caveats) box.appendChild(el('div', 'Caveats: ' + s.profile.caveats, 'hint'));
+
+    box.appendChild(el('label', 'Proposed voice.md (editable)'));
+    const voiceTa = document.createElement('textarea');
+    voiceTa.id = 'styleVoice'; voiceTa.spellcheck = false; voiceTa.value = s.proposal.voiceMd;
+    box.appendChild(voiceTa);
+    box.appendChild(el('label', 'Proposed priorities.md (editable)'));
+    const prioTa = document.createElement('textarea');
+    prioTa.id = 'stylePriorities'; prioTa.spellcheck = false; prioTa.value = s.proposal.prioritiesMd;
+    box.appendChild(prioTa);
+
+    const row = el('div', '', 'tokrow');
+    row.style.marginTop = '12px';
+    row.appendChild(styleButton('Apply to preference files', true, applyStyle));
+    row.appendChild(styleButton('Discard', false, discardStyle));
+    if (s.appliedAt) row.appendChild(el('span', 'Applied ' + s.appliedAt.slice(0, 16).replace('T', ' '), 'status ok'));
+    box.appendChild(row);
+  }
+}
+
+async function refreshStyle() {
+  try { renderStyle(await styleApi('GET', '/style/bootstrap')); }
+  catch (e) { setStatus(e.message, false); }
+}
+
+async function startStyle() {
+  try { renderStyle(await styleApi('POST', '/style/bootstrap')); }
+  catch (e) { setStatus(e.message, false); }
+}
+
+async function applyStyle() {
+  try {
+    const state = await styleApi('POST', '/style/bootstrap/apply', {
+      voiceMd: $('styleVoice').value,
+      prioritiesMd: $('stylePriorities').value,
+    });
+    renderStyle(state);
+    // The main editors now show stale text; refresh them from disk.
+    data = await api('GET');
+    $('voice').value = data.preferences.voice;
+    $('priorities').value = data.preferences.priorities;
+    setStatus('Style applied. Voice and priorities updated; applies to the next review.', true);
+  } catch (e) { setStatus(e.message, false); }
+}
+
+async function discardStyle() {
+  try { renderStyle(await styleApi('DELETE', '/style/bootstrap')); }
+  catch (e) { setStatus(e.message, false); }
 }
 
 $('connect').onclick = async () => {

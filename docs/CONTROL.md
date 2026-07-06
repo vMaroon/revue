@@ -16,6 +16,12 @@ is optional — the page also accepts the token in a field and remembers it in
 `localStorage`. The extension panel also has a **tune** button in its header
 that opens this page (the service worker fills in the port and token).
 
+On its first boot (fresh `${dataDir}/secret`) the daemon opens this page itself
+with `&welcome=1`, which shows a one-time onboarding card: load the unpacked
+extension, copy the token into its options page, and kick off the
+[style bootstrap](STYLE.md). `REVUE_NO_OPEN=1` disables the auto-open; the card
+stays dismissed once you click done.
+
 ## What it tunes
 
 | Section | Fields | Applies |
@@ -25,6 +31,7 @@ that opens this page (the service worker fills in the port and token).
 | Execution | `maxParallel` (concurrent agents), `agentTimeoutMs` (per-agent ceiling) | live |
 | Review voice | full text of `preferences/voice.md` | next review + chat |
 | Review priorities | full text of `preferences/priorities.md` | next review |
+| Style bootstrap | scan your public PR comments into proposed voice/priorities rewrites; edit, then apply or discard ([STYLE.md](STYLE.md)) | next review + chat |
 
 Model and finder changes take effect on the next review because the pipeline
 reads `config` per run. Concurrency and the timeout are read live by the agent
@@ -56,4 +63,4 @@ unknown finder names.
 
 ---
 
-<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [Style](STYLE.md) · [README](../README.md)</sub>

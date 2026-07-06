@@ -9,6 +9,8 @@
     "extension"
   ],
   "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "npm run build && npm run dev",
     "dev": "npm run dev -w server",
     "mock": "REVUE_MOCK=1 npm run dev -w server",
     "build": "npm run build -w extension",

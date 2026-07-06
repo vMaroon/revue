@@ -260,6 +260,39 @@ const MOCK_COST: Record<string, number> = {
   voice: 0.032,
   chat: 0.006,
   learn: 0.002,
+  style: 0.045,
+};
+
+// Schema-valid StyleOut (see style/prompts.ts) so the bootstrap flow is
+// exercisable end-to-end in mock mode.
+const MOCK_STYLE = {
+  linguistic: [
+    {
+      observation: 'Leads with the claim; no greetings or praise preambles.',
+      evidence: ['The retry loop has no backoff, so a transient failure turns into sustained load.'],
+    },
+    {
+      observation: 'Puts identifiers and config names in backticks.',
+      evidence: ['`maxParallel` caps concurrent agents', 'the `PATCH` route already validates this'],
+    },
+  ],
+  interactional: [
+    {
+      observation: 'Softens asks with suggestion framing rather than pleasantries.',
+      evidence: ['Wonder if we could return the joined error here.', 'might be simpler to reuse the existing helper'],
+    },
+  ],
+  technical: [
+    {
+      observation: 'Concentrates on error handling and concurrency; nits stay prefixed and short.',
+      evidence: ['the error from the second call is discarded', 'nit: rename to match the field it mirrors'],
+    },
+  ],
+  caveats: 'Mock profile from canned data; not derived from a real corpus.',
+  voiceMd:
+    '# Review voice (mock bootstrap)\n\n- Lead with the claim; no greetings or praise preambles.\n- Suggestion-framed asks: "Wonder if we could...".\n- Identifiers, types, and config names in backticks.\n',
+  prioritiesMd:
+    '# Review priorities (mock bootstrap)\n\n1. Error handling: swallowed errors, lost context, partial failures.\n2. Concurrency: races, leaks, missing cancellation.\n\nDo not flag style the formatter owns.\n',
 };
 
 function createMockInvoker(config: RevueConfig): AgentInvoker {
@@ -335,6 +368,9 @@ function createMockInvoker(config: RevueConfig): AgentInvoker {
           });
           break;
         }
+        case 'style':
+          text = JSON.stringify(MOCK_STYLE);
+          break;
         case 'learn':
           // Echo a mock merged learnings.md wrapped in the tags the distiller
           // extracts, so the learning loop is exercisable in mock mode.

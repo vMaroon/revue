@@ -10,6 +10,10 @@ drafted comment before publishing, the daemon captures the delta and distills a
 durable lesson into `preferences/learnings.md`, which is injected into the
 finder, drafting, and chat prompts on the next run.
 
+This is the refinement half of a pair: the [style bootstrap](STYLE.md) seeds
+`voice.md`/`priorities.md` from your public GitHub comments; corrections then
+sharpen the behavior review by review.
+
 ## What counts as a correction
 
 Every pipeline comment carries `originalBody` — the exact text the drafting
@@ -51,4 +55,4 @@ Implementation: `server/src/learn/{service,prompts}.ts`, wired from the
 
 ---
 
-<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [Style](STYLE.md) · [README](../README.md)</sub>

@@ -2,8 +2,9 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { Octokit } from '@octokit/rest';
 import type { PrFile, PrMeta, PrRef, RevueConfig } from '@revue/shared';
-import type { GithubService, PrSnapshot } from '../interfaces';
+import type { GithubService, PrSnapshot, UserComment, UserCommentsOptions } from '../interfaces';
 import { ensureWorkdir } from './workdir';
+import { fetchUserComments } from './comments';
 import { validate as validateDraft, publish as publishReview } from './publish';
 
 const execFileAsync = promisify(execFile);
@@ -79,6 +80,10 @@ export function createGithubService(config: RevueConfig): GithubService {
 
     async ensureWorkdir(meta: PrMeta): Promise<string> {
       return ensureWorkdir(config, meta, await getToken());
+    },
+
+    async fetchUserComments(login: string, opts: UserCommentsOptions): Promise<UserComment[]> {
+      return fetchUserComments(await getOctokit(), login, opts);
     },
 
     ghUser(): Promise<string | undefined> {
