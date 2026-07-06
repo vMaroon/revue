@@ -1,4 +1,8 @@
+<sub>[revue](../README.md) · docs · **Pipeline**</sub>
+
 # Review pipeline
+
+> The multi-model, cost-tiered path from a raw diff to verified, in-voice review comments.
 
 Implemented in `server/src/pipeline/` (orchestration, prompts, schemas) with
 all model calls going through `pipeline/agent.ts` (`AgentInvoker`), the only
@@ -149,3 +153,7 @@ server handling.
 - Refuted findings never reach the expensive voice stage.
 - Voice is one call, not per-comment.
 - Workdirs are cached per repo; only `git fetch` runs per review.
+
+---
+
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>

@@ -1,4 +1,8 @@
+<sub>[revue](../README.md) · docs · **Learning**</sub>
+
 # Learning loop
+
+> How a single edit to a drafted comment becomes a durable lesson for every future review.
 
 The pipeline is prompt-driven, so it learns the way the prompts do: by growing
 a preference file that feeds back into future reviews. When you change a
@@ -44,3 +48,7 @@ the next review and chat with no restart.
 
 Implementation: `server/src/learn/{service,prompts}.ts`, wired from the
 `PATCH` comment route in `server/src/routes.ts`.
+
+---
+
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>

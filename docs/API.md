@@ -1,4 +1,8 @@
+<sub>[revue](../README.md) · docs · **API**</sub>
+
 # Daemon HTTP API
+
+> The local daemon's HTTP + SSE surface: auth, endpoints, and the error contract.
 
 Base URL: `http://127.0.0.1:{port}` (default 7388). All payload types are
 defined in `shared/src/types.ts` — this document maps endpoints to those
@@ -93,3 +97,7 @@ pipeline is running. Concurrent chats on different comments are allowed
 
 A comment whose anchor fails validation blocks publish; the UI offers
 discard-or-fix per problem comment (the `problems` array names them).
+
+---
+
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>
