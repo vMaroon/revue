@@ -74,6 +74,8 @@ const defaults: RevueConfig = {
     verifier: 'claude-opus-4-8',
     voice: 'claude-opus-4-8',
     chat: 'claude-opus-4-8',
+    style: 'claude-opus-4-8',
+    learn: 'claude-opus-4-8',
   },
   finders: ['correctness', 'concurrency', 'api-contracts', 'tests', 'security', 'simplicity'],
   // Concurrent agent subprocesses. Kept low by default: each finder is a

@@ -86,7 +86,7 @@ export function createStyleService(config: RevueConfig): StyleService {
       const out = await runJson(
         invoker,
         {
-          model: config.models.voice,
+          model: config.models.style,
           prompt: buildStylePrompt({
             login,
             corpusText: corpus.text,

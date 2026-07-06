@@ -93,6 +93,8 @@ const updateConfigSchema = z.object({
       verifier: z.string().min(1),
       voice: z.string().min(1),
       chat: z.string().min(1),
+      style: z.string().min(1),
+      learn: z.string().min(1),
     })
     .partial()
     .optional(),

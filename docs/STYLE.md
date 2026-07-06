@@ -37,7 +37,7 @@ are computed in code, not by the model.
 
 ## The analysis
 
-One `models.voice` agent call (`tag: 'style'`, single turn, no tools) takes
+One `models.style` agent call (`tag: 'style'`, single turn, no tools) takes
 the corpus, the current contents of both preference files, and the finder
 dimension catalog, and produces JSON per `StyleOut`
 (`server/src/style/prompts.ts`):
