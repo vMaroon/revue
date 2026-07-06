@@ -1,12 +1,13 @@
 {
   "name": "@revue/extension",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "package": "node esbuild.mjs --minify && node scripts/package.mjs"
   },
   "dependencies": {
     "@revue/shared": "*"

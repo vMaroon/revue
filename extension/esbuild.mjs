@@ -1,10 +1,13 @@
 import * as esbuild from 'esbuild';
 
 const watch = process.argv.includes('--watch');
+const minify = process.argv.includes('--minify');
 
 const common = {
   bundle: true,
-  sourcemap: true,
+  // Store builds ship minified with no sourcemaps; dev builds keep both.
+  sourcemap: !minify,
+  minify,
   target: ['chrome120'],
   logLevel: 'info',
 };
