@@ -40,3 +40,22 @@ export function clear(el: Element): void {
 export function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
+
+/**
+ * Keep keyboard events from escaping our shadow UI into the host page. A key
+ * event from inside a shadow root retargets to the host element at the document
+ * level, so GitHub's global hotkeys and the diff grid's arrow-key navigation
+ * fire on keystrokes typed into our inputs (a letter scrolls the page, Ctrl+A
+ * selects the page, etc.). Stop propagation at the shadow boundary in the
+ * bubble phase: the keystroke's default action (typing, select-in-field) and
+ * our own in-shadow handlers still run — they fire before this boundary
+ * listener — but nothing on the page ever sees the event.
+ */
+export function isolateKeys(root: ShadowRoot): void {
+  const stop = (e: Event): void => {
+    e.stopPropagation();
+  };
+  root.addEventListener('keydown', stop);
+  root.addEventListener('keyup', stop);
+  root.addEventListener('keypress', stop);
+}

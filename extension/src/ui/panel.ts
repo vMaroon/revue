@@ -14,7 +14,7 @@ import type {
 } from '@revue/shared';
 import type { MountPanel } from '../lib/contract';
 import { createCard, type CardContext, type CardHandle } from './card';
-import { append, clear, errorMessage, h, type Child } from './dom';
+import { append, clear, errorMessage, h, isolateKeys, type Child } from './dom';
 import { styles } from './styles';
 
 const STAGES: { id: PipelineStage; label: string }[] = [
@@ -51,6 +51,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
   // ---- shadow host -------------------------------------------------------
   const host = document.createElement('revue-root');
   const root = host.attachShadow({ mode: 'open' });
+  isolateKeys(root);
   const styleEl = document.createElement('style');
   styleEl.textContent = styles;
   root.appendChild(styleEl);
@@ -238,6 +239,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
         const cardHost = document.createElement('revue-root');
         cardHost.dataset['revueCommentId'] = c.id;
         const shadow = cardHost.attachShadow({ mode: 'open' });
+        isolateKeys(shadow);
         const st = document.createElement('style');
         st.textContent = styles;
         shadow.appendChild(st);
