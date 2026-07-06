@@ -25,13 +25,19 @@ test('resolveTilde leaves an absolute path untouched', () => {
 });
 
 test('ensureSecret creates a 64-char hex token', () => {
-  const secret = ensureSecret(path.join(scratch, 'a'));
-  assert.match(secret, /^[0-9a-f]{64}$/);
+  const { token } = ensureSecret(path.join(scratch, 'a'));
+  assert.match(token, /^[0-9a-f]{64}$/);
 });
 
 test('ensureSecret is idempotent across calls', () => {
   const dir = path.join(scratch, 'b');
-  assert.equal(ensureSecret(dir), ensureSecret(dir));
+  assert.equal(ensureSecret(dir).token, ensureSecret(dir).token);
+});
+
+test('ensureSecret reports created only on the first call', () => {
+  const dir = path.join(scratch, 'e');
+  assert.equal(ensureSecret(dir).created, true);
+  assert.equal(ensureSecret(dir).created, false);
 });
 
 test('ensureSecret writes the secret file with mode 0600', () => {
@@ -43,6 +49,6 @@ test('ensureSecret writes the secret file with mode 0600', () => {
 
 test('ensureSecret persists the token to disk', () => {
   const dir = path.join(scratch, 'd');
-  const secret = ensureSecret(dir);
-  assert.equal(readFileSync(path.join(dir, 'secret'), 'utf8').trim(), secret);
+  const { token } = ensureSecret(dir);
+  assert.equal(readFileSync(path.join(dir, 'secret'), 'utf8').trim(), token);
 });
