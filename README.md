@@ -1,7 +1,7 @@
 # revue
 
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="revue" width="760">
+  <img src="docs/assets/banner.png" alt="revue" width="760">
 </p>
 
 <p align="center">
