@@ -11,6 +11,17 @@ Two processes, one shared type package:
 - **`@revue/shared`**: every wire shape both sides touch. If a change isn't
   expressible in `shared/src/types.ts`, it isn't on the wire.
 
+```
+┌────────────────────────┐   HTTP + SSE   ┌──────────────────────────────┐
+│ Chrome extension (MV3) │ <────────────> │ local daemon (localhost:7388)│
+│ overlay on github.com  │                │ pipeline · chats · publish   │
+└────────────────────────┘                └──────────┬───────────────────┘
+                                                     │ Claude Agent SDK (your claude login)
+                                                     │ GitHub REST (your gh token)
+                                                     ▼
+                                       ~/.revue/  drafts · repo workdirs
+```
+
 Module contracts: `server/src/interfaces.ts` and
 `extension/src/lib/contract.ts`. Behavior specs: `docs/API.md`,
 `docs/PIPELINE.md`, `docs/EXTENSION.md`.
@@ -110,9 +121,10 @@ the live diff regardless, so stale drafts fail safe.
 | pipeline | `server/src/pipeline/{runner,agent,dedupe,schemas}.ts`, `server/src/pipeline/prompts/{preamble,triage,finders,verify,voice,learned}.ts` |
 | chat | `server/src/chat/{service,prompts}.ts` |
 | learning | `server/src/learn/{service,prompts}.ts` |
+| style bootstrap | `server/src/style/{service,corpus,prompts}.ts`, `server/src/github/comments.ts` |
 | ext core | `extension/src/{background,content,daemon,anchor,options}.ts`, `extension/options.html` |
 | ext ui | `extension/src/ui/{panel,card,chat,hunk,styles}.ts` |
 
 ---
 
-<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [Style](STYLE.md) · [README](../README.md)</sub>

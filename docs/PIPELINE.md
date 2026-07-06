@@ -9,6 +9,20 @@ all model calls going through `pipeline/agent.ts` (`AgentInvoker`), the only
 module that imports `@anthropic-ai/claude-agent-sdk`. Contracts:
 `server/src/interfaces.ts`.
 
+## Stages at a glance
+
+| Stage | Model (default) | What it does |
+|--------|-------------------|--------------|
+| **triage** | `claude-haiku-4-5` | Classifies the PR, picks which finders are worth running |
+| **find** | `claude-sonnet-5` | Parallel finders per dimension, with read access to the checkout |
+| **verify** | `claude-opus-4-8` | Adversarial pass per finding — tries to refute it against the repo |
+| **draft** | `claude-opus-4-8` | Rewrites surviving findings as comments under `preferences/voice.md` |
+| **chat** | `claude-opus-4-8` | Per-comment conversations while the reviewer converges |
+
+Cheap models do the broad scanning; expensive models do judgment and voice.
+Models are configurable per stage in `revue.config.json` or live from the
+[control page](CONTROL.md).
+
 ## Agent invocation
 
 `AgentInvoker.run(opts)` wraps one SDK `query()`:
@@ -156,4 +170,4 @@ server handling.
 
 ---
 
-<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [Style](STYLE.md) · [README](../README.md)</sub>
