@@ -78,6 +78,23 @@ The bootstrap seeds the files; the [learning loop](LEARNING.md) keeps refining
 them from your per-comment corrections. Re-running later re-analyzes with the
 then-current files (including accumulated learnings) as the baseline.
 
+## Running it from the terminal
+
+```sh
+npm run style              # dry run: profile + proposed-file diffs, writes nothing
+npm run style -- --apply   # also writes voice.md, priorities.md, style-profile.md
+```
+
+`server/src/style/cli.ts` runs the same scan and analysis directly — no daemon
+needed, and the daemon's staged bootstrap state is untouched. It prints the
+corpus stats, the three-level profile with its evidence quotes, and a
+`git diff` of each proposed file against the current one, so the effect is
+inspectable before anything is written. `REVUE_MOCK=1 npm run style` exercises
+the flow with a real scan and canned analysis.
+
+Preference reads are cached per on-disk mtime, so a running daemon picks up
+CLI-applied (or hand-edited) files on the next read — no restart.
+
 ## State and control
 
 One bootstrap at a time; state persists at `${dataDir}/style-bootstrap.json`
