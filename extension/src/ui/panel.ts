@@ -189,7 +189,19 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
         const c = findComment(commentId);
         if (c) anchorer.scrollTo(c.path, c.line, c.side);
       },
+      fileUrl,
     };
+  }
+
+  // Links an evidence path/line to its file at the exact commit the pipeline
+  // read (headSha), so the target matches what the finding cites. Undefined
+  // until the first snapshot carries the PR head.
+  function fileUrl(path: string, line?: number): string | undefined {
+    const meta = draft?.pr;
+    if (!meta) return undefined;
+    const segments = path.split('/').map(encodeURIComponent).join('/');
+    const url = `https://github.com/${meta.owner}/${meta.repo}/blob/${meta.headSha}/${segments}`;
+    return line !== undefined ? `${url}#L${line}` : url;
   }
 
   // Panel rows are a navigator: click jumps to the inline card in the diff and
