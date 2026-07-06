@@ -5,7 +5,9 @@
     "finder": "claude-sonnet-5",
     "verifier": "claude-opus-4-8",
     "voice": "claude-opus-4-8",
-    "chat": "claude-opus-4-8"
+    "chat": "claude-opus-4-8",
+    "style": "claude-opus-4-8",
+    "learn": "claude-opus-4-8"
   },
   "finders": ["correctness", "concurrency", "api-contracts", "tests", "security", "simplicity"],
   "maxParallel": 2,

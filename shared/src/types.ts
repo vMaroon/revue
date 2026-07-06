@@ -226,6 +226,10 @@ export interface ModelsConfig {
   verifier: string;
   voice: string;
   chat: string;
+  /** Style bootstrap analysis (docs/STYLE.md). */
+  style: string;
+  /** Learning-loop distillation (docs/LEARNING.md). */
+  learn: string;
 }
 
 export interface RevueConfig {

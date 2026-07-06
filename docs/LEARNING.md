@@ -28,7 +28,7 @@ Manual comments (which have no `originalBody`) and no-op edits are ignored.
 ## How it distills
 
 On a qualifying edit the daemon fires `LearnService.onCorrection`
-(fire-and-forget; it never blocks or fails the edit). It sends the chat model
+(fire-and-forget; it never blocks or fails the edit). It sends the learn model
 the current `learnings.md`, the original vs. final wording, and the last few
 chat turns, and asks for the whole file back with at most one concise, general
 lesson merged in — a tone, structure, severity, scope, or false-positive rule,
@@ -44,7 +44,7 @@ the next review and chat with no restart.
 
 - The file is plain markdown you can edit or prune by hand, or from the control
   page's "Learned corrections" box (see [CONTROL.md](CONTROL.md)).
-- Distillation uses `models.chat`; on a rate-limited subscription it simply
+- Distillation uses `models.learn`; on a rate-limited subscription it simply
   logs a failure and moves on.
 - Because lessons flow into the finder and drafting prompts, a bad lesson
   affects future reviews — review the file periodically and delete anything
