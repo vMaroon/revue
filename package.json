@@ -13,7 +13,9 @@
     "mock": "REVUE_MOCK=1 npm run dev -w server",
     "build": "npm run build -w extension",
     "watch:ext": "npm run watch -w extension",
-    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w extension"
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w extension",
+    "test": "npm run test -w server",
+    "package": "npm run package -w extension"
   },
   "devDependencies": {
     "typescript": "^5.6.0"

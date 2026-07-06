@@ -4,3 +4,4 @@ extension/build/
 *.log
 revue.config.json
 .DS_Store
+.idea/
