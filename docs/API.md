@@ -98,6 +98,22 @@ pipeline is running. Concurrent chats on different comments are allowed
 A comment whose anchor fails validation blocks publish; the UI offers
 discard-or-fix per problem comment (the `problems` array names them).
 
+### Style bootstrap (see docs/STYLE.md)
+
+All exchange `StyleBootstrapState`, a status-discriminated union
+(`idle` | `running` | `ready` | `error`).
+
+- `GET /style/bootstrap` — current state; the control page polls this while
+  a run is in flight (`running` carries `progress`).
+- `POST /style/bootstrap` → `202 StyleBootstrapState` — starts the scan and
+  analysis asynchronously. 409 while a run is already in flight; posting over
+  a `ready`/`error` state starts a fresh run.
+- `POST /style/bootstrap/apply` — body `ApplyStyleRequest` (optional
+  `voiceMd`/`prioritiesMd` overriding the stored proposal) → the `ready`
+  state with `appliedAt` set. Writes the preference files. 409 unless
+  `ready`.
+- `DELETE /style/bootstrap` → `{status: 'idle'}`. 409 while running.
+
 ---
 
-<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [README](../README.md)</sub>
+<sub>**revue docs** · [Architecture](ARCHITECTURE.md) · [Pipeline](PIPELINE.md) · [Extension](EXTENSION.md) · [API](API.md) · [Control](CONTROL.md) · [Learning](LEARNING.md) · [Style](STYLE.md) · [README](../README.md)</sub>

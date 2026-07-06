@@ -294,6 +294,85 @@ export interface UpdateControlRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Style bootstrap (see docs/STYLE.md): profiles the user's public GitHub PR
+// comments and proposes voice.md/priorities.md rewrites, staged behind an
+// explicit apply. Exchanged on /style/bootstrap and /style/bootstrap/apply.
+// ---------------------------------------------------------------------------
+
+/** Where a corpus comment came from: an inline diff comment, a review's
+ *  top-level body, or the PR conversation thread. */
+export type StyleCommentKind = 'review-comment' | 'review-summary' | 'discussion';
+/** The user's role on the PR the comment was made on. */
+export type StyleCommentRole = 'reviewer' | 'author';
+
+export interface StyleCorpusStats {
+  comments: number;
+  byKind: Record<StyleCommentKind, number>;
+  byRole: Record<StyleCommentRole, number>;
+  repos: number;
+  /** Most-sampled repos, `owner/name`, largest first. */
+  topRepos: string[];
+  /** ISO timestamps of the oldest and newest comment sampled. */
+  oldest?: string;
+  newest?: string;
+  chars: number;
+  /** True when more usable comments existed than the sampling caps allowed. */
+  truncated: boolean;
+}
+
+/** One evidence-backed trait; quotes are verbatim corpus excerpts. */
+export interface StyleObservation {
+  observation: string;
+  evidence: string[];
+}
+
+export interface StyleProfile {
+  /** How they write: register, formatting habits, phrasing. */
+  linguistic: StyleObservation[];
+  /** How they engage: directness, disagreement, praise, framing. */
+  interactional: StyleObservation[];
+  /** What they review for: dimensions, altitude, severity habits. */
+  technical: StyleObservation[];
+  /** Sample-quality caveats: size, repo skew, timespan. */
+  caveats: string;
+}
+
+/** Proposed preference-file rewrites; nothing is written until apply. */
+export interface StyleProposal {
+  voiceMd: string;
+  prioritiesMd: string;
+}
+
+export interface StyleProgress {
+  phase: 'searching' | 'collecting' | 'analyzing';
+  prsScanned: number;
+  prsTotal?: number;
+  comments: number;
+}
+
+export type StyleBootstrapState =
+  | { status: 'idle' }
+  | { status: 'running'; login?: string; progress: StyleProgress; startedAt: string }
+  | {
+      status: 'ready';
+      login: string;
+      stats: StyleCorpusStats;
+      profile: StyleProfile;
+      proposal: StyleProposal;
+      finishedAt: string;
+      /** Set once the proposal has been written to the preference files. */
+      appliedAt?: string;
+    }
+  | { status: 'error'; message: string; login?: string };
+
+/** Body of POST /style/bootstrap/apply; fields override the stored proposal
+ *  (the control page lets you edit the text before applying). */
+export interface ApplyStyleRequest {
+  voiceMd?: string;
+  prioritiesMd?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Chat quick actions (rendered as one-click buttons in the comment chat UI)
 // ---------------------------------------------------------------------------
 

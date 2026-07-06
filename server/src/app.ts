@@ -3,6 +3,7 @@ import type { Express, NextFunction, Request, Response } from 'express';
 import { ensureSecret } from './auth';
 import { createChatService } from './chat/service';
 import { createLearnService } from './learn/service';
+import { createStyleService } from './style/service';
 import { loadConfig } from './config';
 import { createEventHub } from './events';
 import { createGithubService } from './github/client';
@@ -14,9 +15,9 @@ import { createStore } from './store';
 import { dlog } from './log';
 import type { Deps } from './interfaces';
 
-export function createApp(): { app: Express; deps: Deps } {
+export function createApp(): { app: Express; deps: Deps; firstBoot: boolean } {
   const config = loadConfig();
-  const token = ensureSecret(config.dataDir);
+  const { token, created: firstBoot } = ensureSecret(config.dataDir);
 
   const store = createStore(config.dataDir);
 
@@ -46,6 +47,7 @@ export function createApp(): { app: Express; deps: Deps } {
     pipeline: createPipelineRunner(),
     chat: createChatService(),
     learn: createLearnService(),
+    style: createStyleService(config),
     auth: { token },
   };
 
@@ -103,5 +105,5 @@ export function createApp(): { app: Express; deps: Deps } {
     if (!res.headersSent) res.status(status).json({ error: message });
   });
 
-  return { app, deps };
+  return { app, deps, firstBoot };
 }

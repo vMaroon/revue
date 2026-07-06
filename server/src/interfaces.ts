@@ -3,6 +3,7 @@
 // only through these types. See docs/ARCHITECTURE.md for the module map.
 
 import type {
+  ApplyStyleRequest,
   DraftComment,
   Finding,
   PrFile,
@@ -14,6 +15,9 @@ import type {
   RevueEvent,
   ReviewDraft,
   Side,
+  StyleBootstrapState,
+  StyleCommentKind,
+  StyleCommentRole,
 } from '@revue/shared';
 
 // ---------------------------------------------------------------------------
@@ -47,9 +51,34 @@ export interface PrSnapshot {
   files: PrFile[];
 }
 
+/** One comment of the user's, sampled for the style corpus (docs/STYLE.md). */
+export interface UserComment {
+  kind: StyleCommentKind;
+  /** The user's role on the PR the comment was made on. */
+  role: StyleCommentRole;
+  /** `owner/name`. */
+  repo: string;
+  prNumber: number;
+  body: string;
+  createdAt: string;
+}
+
+export interface UserCommentsOptions {
+  /** How many recently-active PRs to sample. */
+  maxPrs: number;
+  /** Stop collecting once this many comments are gathered. */
+  maxComments: number;
+  onProgress?: (prsScanned: number, prsTotal: number, comments: number) => void;
+}
+
 export interface GithubService {
   /** PR metadata plus per-file patches, via the GitHub REST API. */
   fetchPr(ref: PrRef): Promise<PrSnapshot>;
+  /**
+   * The user's recent public PR comments (inline review comments, review
+   * bodies, discussion), newest PRs first, for the style bootstrap.
+   */
+  fetchUserComments(login: string, opts: UserCommentsOptions): Promise<UserComment[]>;
   /**
    * Clone (once) and fetch+checkout the PR head into
    * `${dataDir}/workdirs/${owner}__${repo}` (detached at headSha).
@@ -125,7 +154,7 @@ export interface AgentRunOptions {
   /** Called once with this call's USD cost when the result arrives. */
   onCost?: (usd: number) => void;
   /** Label used by the mock invoker to pick a canned response. */
-  tag?: 'triage' | 'finder' | 'verify' | 'voice' | 'chat' | 'learn';
+  tag?: 'triage' | 'finder' | 'verify' | 'voice' | 'chat' | 'learn' | 'style';
 }
 
 export interface AgentResult {
@@ -215,6 +244,30 @@ export interface LearnService {
 }
 
 // ---------------------------------------------------------------------------
+// Style bootstrap (server/src/style/service.ts)
+// ---------------------------------------------------------------------------
+
+export interface StyleService {
+  /** Current bootstrap state (idle / running / ready / error). */
+  get(): StyleBootstrapState;
+  /**
+   * Kicks off the scan+analysis asynchronously and returns the initial
+   * running state; progress is observable by polling get(). Throws when a
+   * run is already in flight. The finished result persists at
+   * `${dataDir}/style-bootstrap.json` until applied, discarded, or re-run.
+   */
+  start(github: GithubService, invoker: AgentInvoker): StyleBootstrapState;
+  /**
+   * Writes the ready proposal (with any field overridden by `overrides`) to
+   * preferences/voice.md and preferences/priorities.md, and the evidence-
+   * backed profile to preferences/style-profile.md. Throws unless ready.
+   */
+  apply(overrides: ApplyStyleRequest): StyleBootstrapState;
+  /** Clears a ready or errored bootstrap back to idle. Throws while running. */
+  discard(): StyleBootstrapState;
+}
+
+// ---------------------------------------------------------------------------
 // Composition (server/src/app.ts wires these; server/src/index.ts starts it)
 // ---------------------------------------------------------------------------
 
@@ -228,6 +281,7 @@ export interface Deps {
   pipeline: PipelineRunner;
   chat: ChatService;
   learn: LearnService;
+  style: StyleService;
   /** Shared-secret check for every request except GET /health. */
   auth: { token: string };
 }

@@ -80,6 +80,11 @@ const chatSchema = z.object({ message: z.string().min(1) });
 
 const publishSchema = z.object({ dryRun: z.boolean().optional() });
 
+const applyStyleSchema = z.object({
+  voiceMd: z.string().min(1).optional(),
+  prioritiesMd: z.string().min(1).optional(),
+});
+
 const updateConfigSchema = z.object({
   models: z
     .object({
@@ -259,6 +264,41 @@ export function createRouter(deps: Deps): Router {
       res.json(controlData());
     }),
   );
+
+  // ------------------------------------------------------------------------
+  // Style bootstrap (docs/STYLE.md): scan public comments -> staged proposal.
+  // Progress is polled, not streamed; the control page is the client.
+  // ------------------------------------------------------------------------
+
+  router.get('/style/bootstrap', (_req, res) => {
+    res.json(deps.style.get());
+  });
+
+  router.post('/style/bootstrap', (_req, res) => {
+    if (deps.style.get().status === 'running') {
+      res.status(409).json({ error: 'style bootstrap already running' });
+      return;
+    }
+    res.status(202).json(deps.style.start(deps.github, deps.invoker));
+  });
+
+  router.post('/style/bootstrap/apply', (req, res) => {
+    const parsed = applyStyleSchema.safeParse(req.body ?? {});
+    if (!parsed.success) return badRequest(res, parsed.error);
+    if (deps.style.get().status !== 'ready') {
+      res.status(409).json({ error: 'no ready style proposal to apply' });
+      return;
+    }
+    res.json(deps.style.apply(parsed.data));
+  });
+
+  router.delete('/style/bootstrap', (_req, res) => {
+    if (deps.style.get().status === 'running') {
+      res.status(409).json({ error: 'cannot discard while running' });
+      return;
+    }
+    res.json(deps.style.discard());
+  });
 
   // ------------------------------------------------------------------------
   // Reviews
