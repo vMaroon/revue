@@ -38,6 +38,7 @@ They are loaded verbatim into the drafting and chat prompts.
 
 ## Summary (review body)
 
+- Try to keep it short and intuitive.
 - Two to five sentences: what the PR does, overall assessment, then the
   themes of the comments if any (not a restatement of each).
 - No scorekeeping ("found 7 issues"), no rubric language, no praise

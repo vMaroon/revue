@@ -5,6 +5,8 @@ Context: I work mostly in Go on distributed systems and LLM inference
 infrastructure (llm-d, Kubernetes ecosystem); calibrate examples and
 severity to that world, but apply the principles to any language in the PR.
 
+Note: always follow repo context and standards.
+
 ## Severity rubric
 
 - **blocking** — would cause incorrect behavior, data loss, a race, a
