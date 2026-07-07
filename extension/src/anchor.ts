@@ -74,36 +74,45 @@ function findClassicRow(path: string, line: number, side: Side): HTMLTableRowEle
 // ---------------------------------------------------------------------------
 // "Changes" diff DOM (current github.com, 2026): a progressive-diffs-list of
 // PullRequestDiffsList diffEntry regions. Each file is a `table[data-diff-anchor]`
-// where the anchor is `diff-<sha256(path)>`; line cells are
+// where the anchor is `diff-<sha256(path)>` and the table carries
+// `aria-label="Diff for: <path>"`; line cells are
 // `td[data-line-number][data-diff-side="left|right"]` carrying a
-// `data-line-anchor="<anchor>{R|L}{line}"`; rows are `tr.diff-line-row`. The
-// file path lives on a header button's `data-file-path`.
+// `data-line-anchor="<anchor>{R|L}{line}"`; rows are `tr.diff-line-row`.
+// The aria-label is the primary path lookup: `data-file-path` exists only on
+// the header's expand-all button, which files rendered in full (added files,
+// small diffs) don't have.
 // ---------------------------------------------------------------------------
 
 function attrValue(v: string): string {
   return v.replace(/["\\]/g, '\\$&');
 }
 
-function changesFileEntry(path: string): Element | null {
+function changesDiffTable(path: string): Element | null {
+  const table = document.querySelector(
+    `table[data-diff-anchor][aria-label="Diff for: ${attrValue(path)}"]`,
+  );
+  if (table) return table;
   const btn = document.querySelector(`[data-file-path="${attrValue(path)}"]`);
-  return btn?.closest('[class*="diffEntry"]') ?? btn?.closest('[class*="Diff-module__diff"]') ?? null;
+  const entry =
+    btn?.closest('[class*="diffEntry"]') ?? btn?.closest('[class*="Diff-module__diff"]');
+  return entry?.querySelector('table[data-diff-anchor]') ?? null;
 }
 
 function findChangesRow(path: string, line: number, side: Side): Element | null {
-  // Scope to the file's own region so a shared line number can't match another
-  // file. A missing entry means the file isn't rendered yet (virtualized) —
+  // Scope to the file's own table so a shared line number can't match another
+  // file. A missing table means the file isn't rendered yet (virtualized) —
   // return null and let observe() re-inject when it scrolls into view.
-  const entry = changesFileEntry(path);
-  if (!entry) return null;
-  const anchor = entry.querySelector('table[data-diff-anchor]')?.getAttribute('data-diff-anchor');
+  const table = changesDiffTable(path);
+  if (!table) return null;
+  const anchor = table.getAttribute('data-diff-anchor');
   const letter = side === 'RIGHT' ? 'R' : 'L';
   let cell = anchor
-    ? entry.querySelector(`td[data-line-anchor="${attrValue(anchor + letter + line)}"]`)
+    ? table.querySelector(`td[data-line-anchor="${attrValue(anchor + letter + line)}"]`)
     : null;
   if (!cell) {
     const d = side === 'RIGHT' ? 'right' : 'left';
     const cands = Array.from(
-      entry.querySelectorAll<HTMLElement>(`td[data-line-number="${line}"][data-diff-side="${d}"]`),
+      table.querySelectorAll<HTMLElement>(`td[data-line-number="${line}"][data-diff-side="${d}"]`),
     );
     cell = cands.find((c) => c.hasAttribute('data-line-anchor')) ?? cands[0] ?? null;
   }
