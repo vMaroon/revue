@@ -127,13 +127,13 @@ export function controlPage(): string {
 
     <div class="card">
       <h2>Learned corrections</h2>
-      <p class="hint">preferences/learnings.md &mdash; grown automatically when you edit or chat-correct a drafted comment, and fed back into future reviews. Prune or edit it here.</p>
+      <p class="hint">preferences/learnings.md &mdash; grown automatically when you edit or chat-correct a drafted comment (one <span class="path" id="learnModel"></span> call per correction), and fed back into future reviews. Prune or edit it here.</p>
       <textarea id="learnings" spellcheck="false"></textarea>
     </div>
 
     <div class="card">
       <h2>Style bootstrap</h2>
-      <p class="hint">Profile your public GitHub PR comments &mdash; how you write, how you engage, what you review for &mdash; and propose voice/priorities rewrites grounded in quoted evidence. Nothing is written until you apply.</p>
+      <p class="hint">Profile your public GitHub PR comments &mdash; how you write, how you engage, what you review for &mdash; and propose voice/priorities rewrites grounded in quoted evidence. One <span class="path" id="styleModel"></span> call per scan; nothing is written until you apply.</p>
       <div id="styleBody"></div>
     </div>
   </form>
@@ -162,7 +162,7 @@ async function api(method, body) {
   return res.json();
 }
 
-const MODEL_LABELS = { triage:'Triage', finder:'Finder', verifier:'Verifier', voice:'Voice / draft', chat:'Chat' };
+const MODEL_LABELS = { triage:'Triage', finder:'Finder', verifier:'Verifier', voice:'Voice / draft', chat:'Chat', style:'Style analysis', learn:'Learning distill' };
 
 function renderModels() {
   const box = $('models'); box.innerHTML = '';
@@ -204,6 +204,8 @@ function fill() {
   $('voice').value = data.preferences.voice;
   $('priorities').value = data.preferences.priorities;
   $('learnings').value = data.preferences.learnings;
+  $('styleModel').textContent = data.config.models.style;
+  $('learnModel').textContent = data.config.models.learn;
   $('tokenCard').classList.add('hidden');
   $('form').classList.remove('hidden');
   $('bar').classList.remove('hidden');

@@ -32,7 +32,7 @@ async function distill(comment: DraftComment, config: RevueConfig, invoker: Agen
   try {
     const current = readPreference('learnings');
     const res = await invoker.run({
-      model: config.models.chat,
+      model: config.models.learn,
       prompt: buildLearnPrompt(current, comment),
       maxTurns: 1,
       tag: 'learn',

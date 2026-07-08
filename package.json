@@ -17,7 +17,8 @@
     "watch:ext": "npm run watch -w extension",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w extension",
     "test": "npm run test -w server",
-    "package": "npm run package -w extension"
+    "package": "npm run package -w extension",
+    "style": "npm run style -w server --"
   },
   "devDependencies": {
     "typescript": "^5.6.0"

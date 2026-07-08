@@ -40,9 +40,22 @@ export function createGithubService(config: RevueConfig): GithubService {
   let ghUserPromise: Promise<string | undefined> | undefined;
 
   const getToken = (): Promise<string | undefined> => (tokenPromise ??= discoverToken());
-  // Unauthenticated Octokit still serves public-repo reads.
+  // Unauthenticated Octokit still serves public-repo reads. Deprecation warns
+  // are muted: the one deprecated endpoint in use (search.issuesAndPullRequests,
+  // github/comments.ts) is a documented choice, and the warning is noise in the
+  // style CLI's output.
+  const octokitLog = {
+    debug: () => {},
+    info: () => {},
+    warn: (msg: string) => {
+      if (!/deprecat/i.test(msg)) console.warn(msg);
+    },
+    error: console.error,
+  };
   const getOctokit = (): Promise<Octokit> =>
-    (octokitPromise ??= getToken().then((token) => new Octokit(token ? { auth: token } : {})));
+    (octokitPromise ??= getToken().then(
+      (token) => new Octokit({ log: octokitLog, ...(token ? { auth: token } : {}) }),
+    ));
 
   // Pending-review mutations act as the viewer, so they hard-require a token.
   const gql: GraphQL = async <T>(query: string, variables?: Record<string, unknown>) => {

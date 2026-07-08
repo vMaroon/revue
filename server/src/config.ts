@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,30 +26,46 @@ export function configPath(): string {
 
 const PREFERENCE_NAMES = ['voice', 'priorities', 'learnings'] as const;
 export type PreferenceName = (typeof PREFERENCE_NAMES)[number];
-const preferenceCache = new Map<PreferenceName, string>();
+// Keyed by mtime so out-of-process writes (hand edits, the style CLI) are
+// picked up on the next read without a daemon restart; a missing file caches
+// as empty under mtime undefined.
+const preferenceCache = new Map<PreferenceName, { content: string; mtimeMs?: number }>();
 
 function preferencePath(name: PreferenceName): string {
   return path.join(projectRoot, 'preferences', `${name}.md`);
 }
 
-/** Cached preference read; the cache is busted by writePreference. A missing
- *  file reads as empty (learnings.md may not exist until the first correction). */
-export function readPreference(name: PreferenceName): string {
-  const cached = preferenceCache.get(name);
-  if (cached !== undefined) return cached;
-  let content = '';
+function preferenceMtime(name: PreferenceName): number | undefined {
   try {
-    content = readFileSync(preferencePath(name), 'utf8');
+    return statSync(preferencePath(name)).mtimeMs;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    return undefined;
   }
-  preferenceCache.set(name, content);
+}
+
+/** Preference read, cached per on-disk mtime. A missing file reads as empty
+ *  (learnings.md may not exist until the first correction). */
+export function readPreference(name: PreferenceName): string {
+  const mtimeMs = preferenceMtime(name);
+  const cached = preferenceCache.get(name);
+  if (cached !== undefined && cached.mtimeMs === mtimeMs) return cached.content;
+  let content = '';
+  if (mtimeMs !== undefined) {
+    try {
+      content = readFileSync(preferencePath(name), 'utf8');
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    }
+  }
+  preferenceCache.set(name, { content, ...(mtimeMs !== undefined ? { mtimeMs } : {}) });
   return content;
 }
 
 export function writePreference(name: PreferenceName, content: string): void {
   writeFileSync(preferencePath(name), content);
-  preferenceCache.set(name, content);
+  const mtimeMs = preferenceMtime(name);
+  preferenceCache.set(name, { content, ...(mtimeMs !== undefined ? { mtimeMs } : {}) });
 }
 
 /** Persist the tunable config fields to configPath() as pretty JSON. */
@@ -74,6 +90,8 @@ const defaults: RevueConfig = {
     verifier: 'claude-opus-4-8',
     voice: 'claude-opus-4-8',
     chat: 'claude-opus-4-8',
+    style: 'claude-opus-4-8',
+    learn: 'claude-opus-4-8',
   },
   finders: ['correctness', 'concurrency', 'api-contracts', 'tests', 'security', 'simplicity'],
   // Concurrent agent subprocesses. Kept low by default: each finder is a

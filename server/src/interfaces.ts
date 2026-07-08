@@ -249,7 +249,7 @@ export interface LearnService {
   /**
    * Called after a pipeline comment's body is edited (directly or via an
    * applied chat revision). Fire-and-forget: distills the change from
-   * originalBody into preferences/learnings.md via the chat model. No-op for
+   * originalBody into preferences/learnings.md via the learn model. No-op for
    * manual comments or unchanged bodies; never throws.
    */
   onCorrection(comment: DraftComment, config: RevueConfig, invoker: AgentInvoker): void;

@@ -26,7 +26,7 @@ stays dismissed once you click done.
 
 | Section | Fields | Applies |
 |---|---|---|
-| Models | the model for each stage (triage, finder, verifier, voice, chat) | next review |
+| Models | the model for each pipeline stage (triage, finder, verifier, voice, chat) plus the style analysis and learning distillation | next review / next scan / next correction |
 | Finders | which finder dimensions the find stage runs | next review |
 | Execution | `maxParallel` (concurrent agents), `agentTimeoutMs` (per-agent ceiling) | live |
 | Review voice | full text of `preferences/voice.md` | next review + chat |
