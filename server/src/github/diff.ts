@@ -1,6 +1,6 @@
 // Pure unified-diff helpers over GitHub API `patch` strings (hunks only, no
-// file headers). Used for publish-time anchor validation and for attaching
-// standalone hunk excerpts to comments.
+// file headers). Used by the pipeline to validate finder anchors and to
+// attach standalone hunk excerpts to comments.
 
 import type { PrFile, Side } from '@revue/shared';
 import type { DiffUtils, Hunk } from '../interfaces';

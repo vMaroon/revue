@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import express from 'express';
@@ -16,6 +15,7 @@ import { FINDER_DIMENSIONS, KNOWN_MODELS } from '@revue/shared';
 import { configPath, projectRoot, readPreference, saveConfig, writePreference } from './config';
 import { controlPage } from './control';
 import { reviewId } from './store';
+import { pushComment, retractAll, retractComment, updateCommentBody, updateSummary } from './sync';
 import type { ChatDeps, Deps, PrSnapshot } from './interfaces';
 
 const version = (
@@ -49,6 +49,7 @@ const createReviewSchema = z.object({
   repo: ghRepo,
   number: z.number().int().positive(),
   force: z.boolean().optional(),
+  focus: z.string().max(4000).optional(),
 });
 
 const prQuerySchema = z.object({
@@ -59,26 +60,15 @@ const prQuerySchema = z.object({
 
 const patchReviewSchema = z.object({
   summary: z.string().optional(),
-  verdict: z.enum(['COMMENT', 'APPROVE', 'REQUEST_CHANGES']).optional(),
-});
-
-const addCommentSchema = z.object({
-  path: z.string().min(1),
-  line: z.number().int().positive(),
-  side: z.enum(['LEFT', 'RIGHT']),
-  startLine: z.number().int().positive().optional(),
-  body: z.string().min(1),
 });
 
 const patchCommentSchema = z.object({
   body: z.string().optional(),
-  status: z.enum(['proposed', 'accepted', 'discarded', 'published']).optional(),
+  status: z.enum(['proposed', 'accepted', 'discarded']).optional(),
   severity: z.enum(['blocking', 'suggestion', 'nit']).optional(),
 });
 
 const chatSchema = z.object({ message: z.string().min(1) });
-
-const publishSchema = z.object({ dryRun: z.boolean().optional() });
 
 const applyStyleSchema = z.object({
   voiceMd: z.string().min(1).optional(),
@@ -128,10 +118,6 @@ function notFound(res: Response, what: string): void {
 
 function touch(draft: ReviewDraft): void {
   draft.updatedAt = new Date().toISOString();
-}
-
-function refreshStale(draft: ReviewDraft, snapshot: PrSnapshot): void {
-  draft.stale = snapshot.meta.headSha !== draft.pr.headSha;
 }
 
 export function createRouter(deps: Deps): Router {
@@ -316,9 +302,13 @@ export function createRouter(deps: Deps): Router {
         res.status(200).json(existing);
         return;
       }
+      // A re-run discards the draft, so first pull its synced comments out of
+      // the pending GitHub review (best-effort).
+      if (existing) await retractAll(deps.github, existing);
 
       const snapshot = await deps.github.fetchPr(ref);
       const now = new Date().toISOString();
+      const focus = ref.focus?.trim();
       const draft: ReviewDraft = {
         id: reviewId(ref),
         pr: snapshot.meta,
@@ -328,6 +318,7 @@ export function createRouter(deps: Deps): Router {
         verdict: 'COMMENT',
         comments: [],
         dropped: [],
+        ...(focus !== undefined && focus !== '' ? { focus } : {}),
         createdAt: now,
         updatedAt: now,
       };
@@ -378,97 +369,81 @@ export function createRouter(deps: Deps): Router {
     });
   });
 
-  router.patch('/reviews/:id', (req, res) => {
-    const draft = getDraft(req, res);
-    if (!draft) return;
-    const parsed = patchReviewSchema.safeParse(req.body);
-    if (!parsed.success) return badRequest(res, parsed.error);
-
-    if (parsed.data.summary !== undefined) draft.summary = parsed.data.summary;
-    if (parsed.data.verdict !== undefined) draft.verdict = parsed.data.verdict;
-    save(draft);
-    emitReview(draft);
-    res.status(200).json(draft);
-  });
-
-  // ------------------------------------------------------------------------
-  // Comments
-  // ------------------------------------------------------------------------
-
-  router.post(
-    '/reviews/:id/comments',
+  router.patch(
+    '/reviews/:id',
     wrap(async (req, res) => {
       const draft = getDraft(req, res);
       if (!draft) return;
-      const parsed = addCommentSchema.safeParse(req.body);
+      const parsed = patchReviewSchema.safeParse(req.body);
       if (!parsed.success) return badRequest(res, parsed.error);
-      const { path: filePath, line, side, startLine, body } = parsed.data;
 
-      const snapshot = await deps.github.fetchPr(draft.pr);
-      refreshStale(draft, snapshot);
-      const anchor = deps.diff.validateAnchor(snapshot.files, filePath, line, side);
-      if (!anchor.valid) {
-        save(draft);
-        res.status(400).json({ error: `invalid anchor: ${anchor.reason ?? 'line is not part of the diff'}` });
-        return;
+      if (parsed.data.summary !== undefined) {
+        // The summary doubles as the pending review's body on GitHub; keep
+        // the mirror consistent or fail the edit.
+        try {
+          await updateSummary(deps.github, draft, parsed.data.summary);
+        } catch (err) {
+          save(draft);
+          res.status(502).json({ error: err instanceof Error ? err.message : String(err) });
+          return;
+        }
+        draft.summary = parsed.data.summary;
       }
-
-      const comment: DraftComment = {
-        id: `m-${randomUUID().slice(0, 8)}`,
-        path: filePath,
-        line,
-        side,
-        startLine,
-        severity: 'suggestion',
-        body,
-        status: 'accepted',
-        origin: 'manual',
-        chat: [],
-        hunk: deps.diff.extractHunk(snapshot.files, filePath, line, side),
-        anchor: { valid: true },
-        updatedAt: new Date().toISOString(),
-      };
-      draft.comments.push(comment);
       save(draft);
-      deps.hub.emit(draft.id, { type: 'comment', reviewId: draft.id, comment });
-      res.status(201).json(comment);
+      emitReview(draft);
+      res.status(200).json(draft);
     }),
   );
 
-  router.patch('/reviews/:id/comments/:cid', (req, res) => {
-    const draft = getDraft(req, res);
-    if (!draft) return;
-    const comment = getComment(draft, req, res);
-    if (!comment) return;
-    const parsed = patchCommentSchema.safeParse(req.body);
-    if (!parsed.success) return badRequest(res, parsed.error);
+  // ------------------------------------------------------------------------
+  // Comments. Status transitions mirror into the viewer's pending GitHub
+  // review: accepting pushes the comment, leaving 'accepted' retracts it,
+  // editing an accepted body rewrites it in place. GitHub goes first; local
+  // state changes only after the sync succeeds, so a failure (bad anchor,
+  // missing token) leaves the draft untouched and surfaces as the error.
+  // ------------------------------------------------------------------------
 
-    const bodyChanged = parsed.data.body !== undefined && parsed.data.body !== comment.body;
-    if (parsed.data.body !== undefined) comment.body = parsed.data.body;
-    if (parsed.data.status !== undefined) comment.status = parsed.data.status;
-    if (parsed.data.severity !== undefined) comment.severity = parsed.data.severity;
-    comment.updatedAt = new Date().toISOString();
-    save(draft);
-    deps.hub.emit(draft.id, { type: 'comment', reviewId: draft.id, comment });
-    res.status(200).json(comment);
-    // A reviewer's edit to a drafted comment is a correction to learn from.
-    if (bodyChanged) deps.learn.onCorrection(comment, deps.config, deps.invoker);
-  });
+  router.patch(
+    '/reviews/:id/comments/:cid',
+    wrap(async (req, res) => {
+      const draft = getDraft(req, res);
+      if (!draft) return;
+      const comment = getComment(draft, req, res);
+      if (!comment) return;
+      const parsed = patchCommentSchema.safeParse(req.body);
+      if (!parsed.success) return badRequest(res, parsed.error);
 
-  router.delete('/reviews/:id/comments/:cid', (req, res) => {
-    const draft = getDraft(req, res);
-    if (!draft) return;
-    const comment = getComment(draft, req, res);
-    if (!comment) return;
-    if (comment.origin !== 'manual') {
-      res.status(409).json({ error: 'pipeline comments are discarded, not deleted' });
-      return;
-    }
-    draft.comments = draft.comments.filter((c) => c.id !== comment.id);
-    save(draft);
-    deps.hub.emit(draft.id, { type: 'comment-removed', reviewId: draft.id, commentId: comment.id });
-    res.status(204).end();
-  });
+      const prev = comment.status;
+      const next = parsed.data.status ?? prev;
+      const body = parsed.data.body ?? comment.body;
+      const bodyChanged = body !== comment.body;
+
+      try {
+        if (next === 'accepted' && prev !== 'accepted') {
+          await pushComment(deps.github, draft, comment, body);
+        } else if (next !== 'accepted' && prev === 'accepted') {
+          await retractComment(deps.github, comment);
+        } else if (next === 'accepted' && bodyChanged) {
+          await updateCommentBody(deps.github, comment, body);
+        }
+      } catch (err) {
+        // The cached pending-review id may have been refreshed; keep that.
+        save(draft);
+        res.status(502).json({ error: err instanceof Error ? err.message : String(err) });
+        return;
+      }
+
+      comment.body = body;
+      comment.status = next;
+      if (parsed.data.severity !== undefined) comment.severity = parsed.data.severity;
+      comment.updatedAt = new Date().toISOString();
+      save(draft);
+      deps.hub.emit(draft.id, { type: 'comment', reviewId: draft.id, comment });
+      res.status(200).json(comment);
+      // A reviewer's edit to a drafted comment is a correction to learn from.
+      if (bodyChanged) deps.learn.onCorrection(comment, deps.config, deps.invoker);
+    }),
+  );
 
   // ------------------------------------------------------------------------
   // Chat
@@ -483,7 +458,7 @@ export function createRouter(deps: Deps): Router {
       if (!comment) return;
       const parsed = chatSchema.safeParse(req.body);
       if (!parsed.success) return badRequest(res, parsed.error);
-      if (draft.status === 'running' || draft.status === 'publishing') {
+      if (draft.status === 'running') {
         res.status(409).json({ error: `cannot chat while review is ${draft.status}` });
         return;
       }
@@ -502,74 +477,6 @@ export function createRouter(deps: Deps): Router {
       };
       const result = await deps.chat.send(draft, comment, parsed.data.message, chatDeps);
       res.status(200).json(result);
-    }),
-  );
-
-  // ------------------------------------------------------------------------
-  // Publish
-  // ------------------------------------------------------------------------
-
-  router.post(
-    '/reviews/:id/publish',
-    wrap(async (req, res) => {
-      const draft = getDraft(req, res);
-      if (!draft) return;
-      const parsed = publishSchema.safeParse(req.body ?? {});
-      if (!parsed.success) return badRequest(res, parsed.error);
-      if (draft.status === 'published') {
-        res.status(409).json({ error: 'review already published' });
-        return;
-      }
-      if (draft.status === 'publishing') {
-        res.status(409).json({ error: 'publish already in progress' });
-        return;
-      }
-      if (draft.status === 'running') {
-        res.status(409).json({ error: 'pipeline is still running' });
-        return;
-      }
-
-      const snapshot = await deps.github.fetchPr(draft.pr);
-      refreshStale(draft, snapshot);
-      const validation = deps.github.validate(draft, snapshot);
-
-      if (parsed.data.dryRun) {
-        save(draft);
-        emitReview(draft);
-        res.status(200).json(validation);
-        return;
-      }
-      if (!validation.ok) {
-        save(draft);
-        emitReview(draft);
-        res.status(409).json(validation);
-        return;
-      }
-
-      draft.status = 'publishing';
-      save(draft);
-      emitReview(draft);
-      try {
-        const result = await deps.github.publish(draft, snapshot);
-        draft.status = 'published';
-        draft.published = { url: result.url, at: result.at };
-        const at = new Date().toISOString();
-        for (const c of draft.comments) {
-          if (c.status === 'accepted') {
-            c.status = 'published';
-            c.updatedAt = at;
-          }
-        }
-        save(draft);
-        emitReview(draft);
-        res.status(200).json(result);
-      } catch (err) {
-        // Failure leaves the draft usable (docs/ARCHITECTURE.md failure modes).
-        draft.status = 'ready';
-        save(draft);
-        emitReview(draft);
-        res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
-      }
     }),
   );
 

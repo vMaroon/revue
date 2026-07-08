@@ -4,17 +4,12 @@
 // See docs/EXTENSION.md for behavior requirements.
 
 import type {
-  AddCommentRequest,
-  ChatMessage,
   ChatResponse,
   DraftComment,
   HealthResponse,
   PatchCommentRequest,
   PatchReviewRequest,
   PrRef,
-  PublishRequest,
-  PublishResult,
-  PublishValidation,
   RevueEvent,
   ReviewDraft,
   Side,
@@ -68,18 +63,15 @@ export const DEFAULT_SETTINGS: ExtensionSettings = { daemonPort: 7388, token: ''
 
 export interface DaemonClient {
   health(): Promise<HealthResponse | null>;
-  /** POST /reviews — creates or returns existing; force re-runs pipeline. */
-  createReview(pr: PrRef, force?: boolean): Promise<ReviewDraft>;
+  /** POST /reviews — creates or returns existing; force re-runs the pipeline,
+   *  focus steers the run (see CreateReviewRequest.focus). */
+  createReview(pr: PrRef, force?: boolean, focus?: string): Promise<ReviewDraft>;
   /** GET /reviews?owner=&repo=&number= — null when no draft exists. */
   getReviewByPr(pr: PrRef): Promise<ReviewDraft | null>;
   patchReview(id: string, patch: PatchReviewRequest): Promise<ReviewDraft>;
   patchComment(id: string, cid: string, patch: PatchCommentRequest): Promise<DraftComment>;
-  addComment(id: string, req: AddCommentRequest): Promise<DraftComment>;
-  deleteComment(id: string, cid: string): Promise<void>;
   /** Resolves with the final reply; deltas arrive on the SSE stream. */
   chat(id: string, cid: string, message: string): Promise<ChatResponse>;
-  publishDryRun(id: string): Promise<PublishValidation>;
-  publish(id: string): Promise<PublishResult>;
   /** Opens the daemon control page in a new tab (via the service worker). */
   openControlPage(): void;
   /** Opens the SSE relay; returns an unsubscribe function. */
@@ -131,6 +123,8 @@ export interface PanelHandle {
 /**
  * Mounts the shadow-DOM panel and takes over rendering: overlay cards on the
  * diff (via anchorer), the side panel (progress, comment list, summary
- * editor, publish flow), and per-comment chat threads.
+ * editor, review-focus input), and per-comment chat threads. Accepted
+ * comments live in the viewer's pending GitHub review; the review is
+ * submitted from GitHub's own UI.
  */
 export type MountPanel = (client: DaemonClient, anchorer: Anchorer, pr: PrRef) => PanelHandle;

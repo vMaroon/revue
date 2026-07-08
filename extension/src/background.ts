@@ -59,7 +59,7 @@ async function handleHttp(req: BgRequest): Promise<BgResponse> {
   } else if (typeof data === 'string' && data !== '') {
     error = data;
   } else if (data !== null && typeof data === 'object') {
-    // e.g. publish 409 returns a PublishValidation body; keep it readable.
+    // Structured error body without an `error` field; keep it readable.
     error = JSON.stringify(data);
   }
   return { ok: false, error, status: res.status };

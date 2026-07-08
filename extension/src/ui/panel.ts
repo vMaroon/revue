@@ -1,20 +1,20 @@
 // Panel orchestration: shadow-DOM host with the floating button and side
 // panel, overlay-card lifecycle through the anchorer, and reconciliation of
-// every RevueEvent into the single held ReviewDraft.
+// every RevueEvent into the single held ReviewDraft. Accepted comments live
+// in the viewer's pending GitHub review; the footer links to GitHub's own
+// submit flow.
 
 import type {
   DraftComment,
   Finding,
   PipelineStage,
-  PublishValidation,
   ReviewDraft,
-  ReviewVerdict,
   RevueEvent,
   Severity,
 } from '@revue/shared';
 import type { MountPanel } from '../lib/contract';
 import { createCard, type CardContext, type CardHandle } from './card';
-import { append, clear, errorMessage, h, isolateKeys, type Child } from './dom';
+import { clear, errorMessage, h, isolateKeys } from './dom';
 import { styles } from './styles';
 
 const STAGES: { id: PipelineStage; label: string }[] = [
@@ -41,7 +41,9 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
   let droppedOpen = false;
   let listDirty = false;
   let summaryTimer: number | undefined;
-  let modalEl: HTMLElement | null = null;
+  // The focus input belongs to the user once touched; only an untouched
+  // input adopts the draft's stored focus.
+  let focusTouched = false;
 
   const liveFindings = new Map<string, Finding>();
   const expandedIds = new Set<string>();
@@ -64,45 +66,44 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
 
   // ---- panel skeleton; persistent form controls keep focus across renders -
   const headBox = h('div', { class: 'rv-head' });
+  // Re-rendered head parts; the focus input between them is persistent so
+  // typing survives stage-event re-renders.
+  const headTop = h('div');
+  const headActionsBox = h('div', { class: 'rv-head-actions' });
   const bannerBox = h('div');
   const stagesBox = h('div');
   const listBox = h('div');
   const footBox = h('div', { class: 'rv-foot' });
 
   const summaryInput = h('textarea', { class: 'rv-input rv-summary-input', rows: 5, placeholder: 'Review summary (markdown)' });
-  const verdictSelect = h(
-    'select',
-    { class: 'rv-select' },
-    h('option', { value: 'COMMENT' }, 'Comment'),
-    h('option', { value: 'APPROVE' }, 'Approve'),
-    h('option', { value: 'REQUEST_CHANGES' }, 'Request changes'),
-  );
+  const verdictHint = h('span', { class: 'rv-muted rv-verdict-hint' });
   const summarySection = h(
     'div',
     { class: 'rv-section rv-hidden' },
-    h('div', { class: 'rv-section-title' }, 'Summary'),
+    h(
+      'div',
+      { class: 'rv-section-title rv-section-title-row', title: 'Doubles as the body of your pending GitHub review' },
+      h('span', {}, 'Summary (pending review body)'),
+      verdictHint,
+    ),
     summaryInput,
-    h('div', { class: 'rv-verdict-row' }, h('span', { class: 'rv-muted' }, 'Verdict'), verdictSelect),
   );
 
-  const addPathSelect = h('select', { class: 'rv-select rv-add-path' });
-  const addPathInput = h('input', { class: 'rv-input', type: 'text', placeholder: 'path/to/file (overrides dropdown)' });
-  const addLineInput = h('input', { class: 'rv-input', type: 'number', min: 1, placeholder: 'line' });
-  const addSideSelect = h('select', { class: 'rv-select' }, h('option', { value: 'RIGHT' }, 'RIGHT'), h('option', { value: 'LEFT' }, 'LEFT'));
-  const addBodyInput = h('textarea', { class: 'rv-input rv-add-body', rows: 3, placeholder: 'Comment body (markdown)' });
-  const addErrorEl = h('div', { class: 'rv-form-error rv-hidden' });
-  const addSection = h(
-    'div',
-    { class: 'rv-section rv-hidden' },
-    h('div', { class: 'rv-section-title' }, 'Add comment'),
-    addPathSelect,
-    h('div', { class: 'rv-add-grid' }, addPathInput, addLineInput, addSideSelect),
-    addBodyInput,
-    addErrorEl,
-    h('div', { class: 'rv-card-actions' }, h('button', { class: 'rv-btn rv-btn-primary', onclick: () => void submitAdd() }, 'Add comment')),
-  );
+  // Free-text focus for the next pipeline run, e.g. "concurrency in the
+  // producer path; ignore test files".
+  const focusInput = h('textarea', {
+    class: 'rv-input rv-focus-input',
+    rows: 2,
+    placeholder: 'Focus this review (optional): what to weight, what to ignore',
+  });
+  focusInput.addEventListener('input', () => {
+    focusTouched = true;
+  });
 
-  const bodyEl = h('div', { class: 'rv-body' }, bannerBox, stagesBox, summarySection, listBox, addSection);
+  const bodyEl = h('div', { class: 'rv-body' }, bannerBox, stagesBox, summarySection, listBox);
+  headBox.appendChild(headTop);
+  headBox.appendChild(focusInput);
+  headBox.appendChild(headActionsBox);
   const panelEl = h('section', { class: 'rv-panel' }, headBox, bodyEl, footBox);
   root.appendChild(panelEl);
   document.body.appendChild(host);
@@ -124,23 +125,6 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
           if (!destroyed) showNotice(`Saving summary failed: ${errorMessage(e)}`);
         });
     }, 600);
-  });
-
-  verdictSelect.addEventListener('change', () => {
-    if (!draft) return;
-    const v = verdictSelect.value;
-    const verdict: ReviewVerdict = v === 'APPROVE' ? 'APPROVE' : v === 'REQUEST_CHANGES' ? 'REQUEST_CHANGES' : 'COMMENT';
-    client
-      .patchReview(reviewId, { verdict })
-      .then((d) => {
-        if (!destroyed) {
-          draft = d;
-          renderAll();
-        }
-      })
-      .catch((e) => {
-        if (!destroyed) showNotice(`Saving verdict failed: ${errorMessage(e)}`);
-      });
   });
 
   // List re-renders are deferred while the user types inside a card so the
@@ -274,8 +258,8 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
   // ---- panel sections ----------------------------------------------------
 
   function renderHead(): void {
-    clear(headBox);
-    headBox.appendChild(
+    clear(headTop);
+    headTop.appendChild(
       h(
         'div',
         { class: 'rv-head-row' },
@@ -286,13 +270,18 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
         h('button', { class: 'rv-icon-btn', title: 'Close panel', onclick: () => toggle() }, 'x'),
       ),
     );
-    if (draft) headBox.appendChild(h('div', { class: 'rv-head-title', title: draft.pr.title }, draft.pr.title));
-    headBox.appendChild(h('div', { class: 'rv-head-actions' }, runButton()));
+    if (draft) headTop.appendChild(h('div', { class: 'rv-head-title', title: draft.pr.title }, draft.pr.title));
+    // An untouched input adopts the focus the current draft ran with.
+    if (!focusTouched && draft?.focus !== undefined && root.activeElement !== focusInput) {
+      focusInput.value = draft.focus;
+    }
+    clear(headActionsBox);
+    headActionsBox.appendChild(runButton());
   }
 
   function runButton(): HTMLElement {
     const hasRun = draft !== null && draft.status !== 'pending';
-    const running = draft !== null && (draft.status === 'running' || draft.status === 'publishing');
+    const running = draft !== null && draft.status === 'running';
     const label = runBusy ? 'Starting...' : running ? 'Running...' : hasRun ? 'Re-run review' : 'Run review';
     return h('button', { class: 'rv-btn rv-btn-primary', disabled: runBusy || running || undefined, onclick: () => void onRun() }, label);
   }
@@ -300,13 +289,21 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
   async function onRun(): Promise<void> {
     if (runBusy) return;
     const rerun = draft !== null && draft.status !== 'pending';
-    if (rerun && !confirm('Re-run the review? Current pipeline comments will be discarded.')) return;
+    if (
+      rerun &&
+      !confirm(
+        'Re-run the review? Current comments are discarded and any synced ones are retracted from your pending GitHub review.',
+      )
+    ) {
+      return;
+    }
     runBusy = true;
     notice = null;
     renderHead();
     renderBanners();
     try {
-      const d = await client.createReview(pr, rerun);
+      const focus = focusInput.value.trim();
+      const d = await client.createReview(pr, rerun, focus === '' ? undefined : focus);
       if (destroyed) return;
       liveFindings.clear();
       draft = d;
@@ -377,41 +374,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
     if (!draft) return;
     const active = root.activeElement;
     if (active !== summaryInput && summaryTimer === undefined) summaryInput.value = draft.summary;
-    if (active !== verdictSelect) verdictSelect.value = draft.verdict;
-  }
-
-  function syncAddForm(): void {
-    const paths = [...new Set((draft?.comments ?? []).map((c) => c.path))].sort();
-    const prev = addPathSelect.value;
-    clear(addPathSelect);
-    for (const p of paths) addPathSelect.appendChild(h('option', { value: p }, p));
-    if (paths.includes(prev)) addPathSelect.value = prev;
-    addPathSelect.classList.toggle('rv-hidden', paths.length === 0);
-  }
-
-  async function submitAdd(): Promise<void> {
-    if (!draft) return;
-    const path = addPathInput.value.trim() !== '' ? addPathInput.value.trim() : addPathSelect.value;
-    const line = Number.parseInt(addLineInput.value, 10);
-    const side = addSideSelect.value === 'LEFT' ? 'LEFT' : 'RIGHT';
-    const body = addBodyInput.value.trim();
-    if (path === '' || !Number.isFinite(line) || line < 1 || body === '') {
-      addErrorEl.textContent = 'Path, a positive line number, and a body are required.';
-      addErrorEl.classList.remove('rv-hidden');
-      return;
-    }
-    addErrorEl.classList.add('rv-hidden');
-    try {
-      const c = await client.addComment(reviewId, { path, line, side, body });
-      if (destroyed) return;
-      upsertComment(c);
-      addBodyInput.value = '';
-      addLineInput.value = '';
-      renderAll();
-    } catch (e) {
-      addErrorEl.textContent = errorMessage(e);
-      addErrorEl.classList.remove('rv-hidden');
-    }
+    verdictHint.textContent = `pipeline suggests: ${draft.verdict}`;
   }
 
   // ---- comment list ------------------------------------------------------
@@ -472,7 +435,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
         h('span', { class: `rv-chip rv-chip-${c.severity}` }, c.severity),
         h('span', { class: 'rv-row-loc' }, `${baseName}:${c.line}`),
         c.finding?.verification?.verdict === 'UNCERTAIN' ? h('span', { class: 'rv-badge rv-badge-unverified' }, 'unverified') : null,
-        c.status === 'accepted' ? h('span', { class: 'rv-badge rv-badge-accepted' }, 'accepted') : null,
+        c.status === 'accepted' ? h('span', { class: 'rv-badge rv-badge-accepted', title: 'In your pending GitHub review' }, 'pending') : null,
         c.status === 'discarded' ? h('span', { class: 'rv-badge rv-badge-discarded' }, 'discarded') : null,
         c.status === 'published' ? h('span', { class: 'rv-badge rv-badge-published' }, 'published') : null,
         h('span', { class: 'rv-row-preview' }, firstBodyLine(c.body)),
@@ -542,143 +505,35 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
     return box;
   }
 
-  // ---- footer / publish --------------------------------------------------
+  // ---- footer: the review is submitted from GitHub's own UI ---------------
 
   function renderFoot(): void {
     clear(footBox);
     if (!draft) return;
     if (draft.published) {
-      footBox.appendChild(h('a', { class: 'rv-btn rv-btn-primary rv-publish', href: draft.published.url, target: '_blank', rel: 'noreferrer' }, 'View published review'));
+      footBox.appendChild(h('a', { class: 'rv-btn rv-btn-primary rv-finish', href: draft.published.url, target: '_blank', rel: 'noreferrer' }, 'View published review'));
       return;
     }
     const accepted = draft.comments.filter((c) => c.status === 'accepted').length;
-    const disabled = draft.status === 'running' || draft.status === 'publishing' || runBusy;
-    footBox.appendChild(
-      h('button', { class: 'rv-btn rv-btn-primary rv-publish', disabled: disabled || undefined, onclick: () => void openPublish() }, `Publish (${accepted} accepted)`),
-    );
-  }
-
-  function closeModal(): void {
-    modalEl?.remove();
-    modalEl = null;
-  }
-
-  function jumpTo(commentId: string): void {
-    closeModal();
-    if (!panelOpen) toggle();
-    const c = findComment(commentId);
-    if (!c) return;
-    navigateToComment(c);
-    if (!(overlayCards.get(commentId)?.host.isConnected ?? false)) {
-      panelCards.get(commentId)?.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }
-
-  async function openPublish(): Promise<void> {
-    if (!draft) return;
-    closeModal();
-    const dialog = h('div', { class: 'rv-modal' });
-    const backdrop = h('div', { class: 'rv-modal-backdrop' }, dialog);
-    backdrop.addEventListener('click', (ev) => {
-      if (ev.target === backdrop) closeModal();
-    });
-    root.appendChild(backdrop);
-    modalEl = backdrop;
-
-    const setContent = (...nodes: Child[]): void => {
-      clear(dialog);
-      append(dialog, nodes);
-    };
-
-    const runDryRun = async (): Promise<void> => {
-      setContent(h('h3', { class: 'rv-modal-title' }, 'Publish review'), h('p', { class: 'rv-muted' }, 'Validating against the live diff...'));
-      let v: PublishValidation;
-      try {
-        v = await client.publishDryRun(reviewId);
-      } catch (e) {
-        setContent(
-          h('h3', { class: 'rv-modal-title' }, 'Publish review'),
-          h('div', { class: 'rv-banner rv-banner-error' }, errorMessage(e)),
-          h(
-            'div',
-            { class: 'rv-modal-actions' },
-            h('button', { class: 'rv-btn', onclick: () => closeModal() }, 'Close'),
-            h('button', { class: 'rv-btn rv-btn-primary', onclick: () => void runDryRun() }, 'Retry'),
-          ),
-        );
-        return;
-      }
-      renderValidation(v);
-    };
-
-    const renderValidation = (v: PublishValidation): void => {
-      const summaryPreview = (draft?.summary ?? '').trim();
-      const problems = v.problems.map((p) => {
-        const c = findComment(p.commentId);
-        return h(
-          'li',
-          { class: 'rv-problem' },
-          h('button', { class: 'rv-link', onclick: () => jumpTo(p.commentId) }, c ? `${c.path}:${c.line}` : p.commentId),
-          ` ${p.reason}`,
-        );
-      });
-      setContent(
-        h('h3', { class: 'rv-modal-title' }, 'Publish review'),
-        h(
-          'div',
-          { class: 'rv-publish-stats' },
-          h('div', null, `${v.willPost.comments} comment${v.willPost.comments === 1 ? '' : 's'} will be posted`),
-          h('div', null, `Verdict: ${v.willPost.verdict}`),
-          h('div', null, `Summary: ${v.willPost.summaryChars} characters`),
-        ),
-        summaryPreview !== ''
-          ? h('div', { class: 'rv-summary-preview' }, summaryPreview.length > 400 ? `${summaryPreview.slice(0, 400)}...` : summaryPreview)
-          : null,
-        problems.length > 0
-          ? h('div', { class: 'rv-banner rv-banner-error' }, `${problems.length} comment${problems.length === 1 ? '' : 's'} failed anchor validation. Fix or discard them, then re-validate.`)
-          : null,
-        problems.length > 0 ? h('ul', { class: 'rv-problems' }, ...problems) : null,
-        h(
-          'div',
-          { class: 'rv-modal-actions' },
-          h('button', { class: 'rv-btn', onclick: () => closeModal() }, 'Cancel'),
-          h('button', { class: 'rv-btn', onclick: () => void runDryRun() }, 'Re-validate'),
-          h('button', { class: 'rv-btn rv-btn-primary', disabled: !v.ok || undefined, onclick: () => void doPublish() }, 'Publish to GitHub'),
-        ),
+    if (accepted === 0) {
+      footBox.appendChild(
+        h('div', { class: 'rv-foot-hint rv-muted' }, 'Accepted comments join your pending review on GitHub.'),
       );
-    };
-
-    const doPublish = async (): Promise<void> => {
-      setContent(h('h3', { class: 'rv-modal-title' }, 'Publish review'), h('p', { class: 'rv-muted' }, 'Posting to GitHub...'));
-      try {
-        const res = await client.publish(reviewId);
-        if (destroyed) return;
-        if (draft) {
-          draft.status = 'published';
-          draft.published = { url: res.url, at: res.at };
-          for (const c of draft.comments) if (c.status === 'accepted') c.status = 'published';
-        }
-        renderAll();
-        setContent(
-          h('h3', { class: 'rv-modal-title' }, 'Review published'),
-          h('p', null, h('a', { class: 'rv-link', href: res.url, target: '_blank', rel: 'noreferrer' }, 'View the review on GitHub')),
-          h('div', { class: 'rv-modal-actions' }, h('button', { class: 'rv-btn rv-btn-primary', onclick: () => closeModal() }, 'Done')),
-        );
-      } catch (e) {
-        setContent(
-          h('h3', { class: 'rv-modal-title' }, 'Publish failed'),
-          h('div', { class: 'rv-banner rv-banner-error' }, errorMessage(e)),
-          h(
-            'div',
-            { class: 'rv-modal-actions' },
-            h('button', { class: 'rv-btn', onclick: () => closeModal() }, 'Close'),
-            h('button', { class: 'rv-btn rv-btn-primary', onclick: () => void runDryRun() }, 'Re-validate'),
-          ),
-        );
-      }
-    };
-
-    await runDryRun();
+      return;
+    }
+    footBox.appendChild(
+      h(
+        'a',
+        {
+          class: 'rv-btn rv-btn-primary rv-finish',
+          href: `${draft.pr.url}/files`,
+          target: '_blank',
+          rel: 'noreferrer',
+          title: 'Opens the PR diff; submit the pending review from there',
+        },
+        `Finish review on GitHub (${accepted} pending)`,
+      ),
+    );
   }
 
   // ---- top-level render --------------------------------------------------
@@ -697,9 +552,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
     renderBanners();
     renderStages();
     summarySection.classList.toggle('rv-hidden', !draft);
-    addSection.classList.toggle('rv-hidden', !draft);
     syncSummaryControls();
-    syncAddForm();
     renderList();
     renderFoot();
   }
@@ -814,7 +667,6 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
     if (destroyed) return;
     destroyed = true;
     if (summaryTimer !== undefined) clearTimeout(summaryTimer);
-    closeModal();
     for (const [, entry] of overlayCards) entry.host.remove();
     overlayCards.clear();
     panelCards.clear();

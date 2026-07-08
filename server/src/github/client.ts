@@ -2,10 +2,17 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { Octokit } from '@octokit/rest';
 import type { PrFile, PrMeta, PrRef, RevueConfig } from '@revue/shared';
-import type { GithubService, PrSnapshot, UserComment, UserCommentsOptions } from '../interfaces';
+import type {
+  GithubService,
+  PendingAnchor,
+  PrSnapshot,
+  UserComment,
+  UserCommentsOptions,
+} from '../interfaces';
 import { ensureWorkdir } from './workdir';
 import { fetchUserComments } from './comments';
-import { validate as validateDraft, publish as publishReview } from './publish';
+import * as pending from './pending';
+import type { GraphQL } from './pending';
 
 const execFileAsync = promisify(execFile);
 
@@ -36,6 +43,18 @@ export function createGithubService(config: RevueConfig): GithubService {
   // Unauthenticated Octokit still serves public-repo reads.
   const getOctokit = (): Promise<Octokit> =>
     (octokitPromise ??= getToken().then((token) => new Octokit(token ? { auth: token } : {})));
+
+  // Pending-review mutations act as the viewer, so they hard-require a token.
+  const gql: GraphQL = async <T>(query: string, variables?: Record<string, unknown>) => {
+    const token = await getToken();
+    if (!token) {
+      throw new Error(
+        'pending-review sync requires a GitHub token: run `gh auth login` or set GITHUB_TOKEN',
+      );
+    }
+    const octokit = await getOctokit();
+    return octokit.graphql<T>(query, variables);
+  };
 
   return {
     async fetchPr(ref: PrRef): Promise<PrSnapshot> {
@@ -99,16 +118,15 @@ export function createGithubService(config: RevueConfig): GithubService {
         }));
     },
 
-    validate: validateDraft,
-
-    async publish(draft, snapshot) {
-      const token = await getToken();
-      if (!token) {
-        throw new Error(
-          'publishing requires a GitHub token: run `gh auth login` or set GITHUB_TOKEN',
-        );
-      }
-      return publishReview(await getOctokit(), draft, snapshot);
-    },
+    findPendingReview: (ref: PrRef) => pending.findPendingReview(gql, ref),
+    createPendingReview: (pullRequestId: string, body: string) =>
+      pending.createPendingReview(gql, pullRequestId, body),
+    addPendingComment: (pendingReviewId: string, anchor: PendingAnchor, body: string) =>
+      pending.addPendingComment(gql, pendingReviewId, anchor, body),
+    updatePendingComment: (commentId: string, body: string) =>
+      pending.updatePendingComment(gql, commentId, body),
+    deletePendingComment: (commentId: string) => pending.deletePendingComment(gql, commentId),
+    updatePendingReviewBody: (pendingReviewId: string, body: string) =>
+      pending.updatePendingReviewBody(gql, pendingReviewId, body),
   };
 }

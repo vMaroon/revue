@@ -84,32 +84,31 @@ draft cards are unmistakably *not* real GitHub comments.
 - **Floating button** bottom-right on PR pages: Revue mark + status dot
   (daemon ok/down/unauthorized) + draft comment count. Click toggles panel.
 - **Panel** (right side, ~380px, resizable is out of scope): sections —
-  - header: PR ref, pipeline status/stale banner, **Run review** /
-    **Re-run** (confirm re-run: discards pipeline drafts, keeps manual),
+  - header: PR ref, pipeline status/stale banner, **focus input** (free
+    text steering the next run; an untouched input adopts the draft's
+    stored focus), **Run review** / **Re-run** (confirm re-run: discards
+    the draft and retracts synced pending comments),
   - stage progress list with live detail lines while running,
-  - summary editor (textarea, debounced PATCH) + verdict select,
+  - summary editor (textarea, debounced PATCH — mirrors into the pending
+    review body) with the pipeline's suggested verdict as a hint,
   - comment list grouped by file, ordered blocking → suggestion → nit;
     each row: severity chip, path:line, first line of body, unverified
-    badge when `verification.verdict === 'UNCERTAIN'`, dropped-count line
-    at the bottom ("pipeline dropped N refuted findings" — expandable),
-  - **Publish** button with accepted-count; opens the publish flow.
+    badge when `verification.verdict === 'UNCERTAIN'`, "pending" badge for
+    accepted comments, dropped-count line at the bottom ("pipeline dropped
+    N refuted findings" — expandable),
+  - footer: **Finish review on GitHub (N pending)** link to the PR diff —
+    the review is submitted from GitHub's own dialog, not from here.
 - **Cards** (overlay under diff rows, and expandable in the panel list):
   severity chip · path:line · anchored/panel-only marker · body (markdown
   rendered minimally: paragraphs, inline code, code fences) · collapsible
   evidence section (claim, consequence, evidence notes, verification
   verdict + notes, dimension, model) · actions: **Edit** (textarea →
-  save/cancel) · **Accept** / **Discard** (toggle) · **Chat**.
+  save/cancel) · **Accept** (pushes into the pending GitHub review; shown
+  as **Pending on GitHub** once synced) / **Discard** (toggle) · **Chat**.
 - **Chat thread** expands inside the card: history, streaming assistant
   text (from `chat-delta` events), quick-action buttons (`QUICK_ACTIONS`),
   input box. When a reply carries `revisedBody`, show a diff-ish preview
   block with **Apply to comment** (PATCH body) / dismiss.
-- **Add comment**: per-line "+" affordance on diff row hover where the DOM
-  supports it, plus an "Add comment" form in the panel (file dropdown from
-  draft's files, line, side) as the always-available path.
-- **Publish flow** (modal in the panel): calls dry-run, shows
-  `PublishValidation` (count, verdict, summary preview, problems with
-  jump-to links), then **Publish to GitHub** → publish, success state links
-  to the posted review, cards flip to published styling.
 
 State: the panel holds one `ReviewDraft` and reconciles SSE events into it
 (`review` replaces, `comment` upserts, `stage` updates, chat events route to

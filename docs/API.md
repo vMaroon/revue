@@ -29,9 +29,9 @@ PATCH, DELETE`. The token is the actual access control.
 
 Non-2xx responses are `{"error": string}`. 404 for unknown review/comment
 ids, 400 for malformed bodies (zod-validated), 409 for state conflicts
-(publishing an already-published review, publishing with failing validation,
-chatting while the pipeline is still running), 500 with the message for
-unexpected failures.
+(chatting while the pipeline is still running), 502 when a pending-review
+sync against GitHub fails (the local draft is left unchanged), 500 with the
+message for unexpected failures.
 
 ## Endpoints
 
@@ -44,7 +44,12 @@ Idempotent per PR: if a draft exists for `${owner}__${repo}__${number}` and
 `force` is not set, returns the existing draft (200). Otherwise (or with
 `force: true`) resets the draft and starts the pipeline **asynchronously**,
 returning the initial draft immediately (202) — progress arrives over SSE.
-`force` preserves nothing (fresh run); the previous file is overwritten.
+`force` preserves nothing (fresh run); the previous file is overwritten, and
+comments the old draft had synced into the pending GitHub review are
+retracted first (best-effort). Optional `focus` (free text, ≤4000 chars) is
+stored on the draft and steers the run: it lands in the shared prompt
+preamble as a "Reviewer focus" section that weights triage, finders, and the
+draft stage without forbidding serious findings outside it.
 
 ### `GET /reviews?owner=&repo=&number=` → `ReviewDraft` | 404
 Lookup by PR.
@@ -60,19 +65,18 @@ events. Auth via `?token=` (EventSource/fetch from the SW can't set headers
 on all paths).
 
 ### `PATCH /reviews/:id` — body `PatchReviewRequest` → `ReviewDraft`
-Edits summary and/or verdict. Emits `{type: 'review'}`.
-
-### `POST /reviews/:id/comments` — body `AddCommentRequest` → `201 DraftComment`
-Manual comment: validated against the PR diff (`validateAnchor`); hunk is
-attached; `origin: 'manual'`, `status: 'accepted'`. Emits `{type: 'comment'}`.
+Edits the summary. The summary doubles as the pending GitHub review's body:
+when a pending review exists it is re-resolved and its body rewritten first;
+a sync failure is a 502 and the local summary stays unchanged. Emits
+`{type: 'review'}`.
 
 ### `PATCH /reviews/:id/comments/:cid` — body `PatchCommentRequest` → `DraftComment`
-Edit body / severity / status (accept, discard, un-discard). Emits
+Edit body / severity / status (accept, discard, un-discard). Status
+transitions mirror into the viewer's **pending GitHub review** (see "Pending
+review" below): entering `accepted` pushes the comment, leaving `accepted`
+retracts it, editing an accepted body rewrites it on GitHub. GitHub goes
+first; on failure the draft is untouched and the response is a 502. Emits
 `{type: 'comment'}`.
-
-### `DELETE /reviews/:id/comments/:cid` → 204
-Only for `origin: 'manual'` comments (pipeline comments are discarded, not
-deleted, so provenance survives). Emits `{type: 'comment-removed'}`.
 
 ### `POST /reviews/:id/comments/:cid/chat` — body `ChatRequest` → `ChatResponse`
 Runs one turn of the comment's chat session (see docs/PIPELINE.md §Chat).
@@ -82,21 +86,28 @@ stream while the request is in flight; the request resolves with the final
 pipeline is running. Concurrent chats on different comments are allowed
 (subject to `maxParallel`).
 
-### `POST /reviews/:id/publish` — body `PublishRequest`
-1. Re-fetches the PR (fresh snapshot; also updates `stale`).
-2. Validates every **accepted** comment's anchor against the live diff →
-   `PublishValidation`.
-3. `dryRun: true` → `200 PublishValidation` (never posts).
-4. Otherwise: if validation fails → `409 PublishValidation`. If it passes →
-   posts a single review via
-   `POST /repos/{owner}/{repo}/pulls/{number}/reviews` with `body` =
-   summary, `event` = verdict, `comments` = accepted comments
-   (`{path, line, side, start_line?, start_side?, body}`), marks the draft
-   and comments `published`, saves, emits `{type: 'review'}`, and returns
-   `200 PublishResult`.
+## Pending review
 
-A comment whose anchor fails validation blocks publish; the UI offers
-discard-or-fix per problem comment (the `problems` array names them).
+There is no publish endpoint: accepting a comment immediately places it in
+the viewer's **pending review** on GitHub, and the review is submitted from
+GitHub's own "Finish your review" dialog (verdict and final body are chosen
+there; the pending body is pre-seeded with the draft summary).
+
+Mechanics (`server/src/sync.ts` over the GraphQL ops in
+`server/src/github/pending.ts`; all require an authenticated token):
+
+- First accept resolves the viewer's pending review on the PR — reusing one
+  started on GitHub — or creates it (`addPullRequestReview`), then adds the
+  comment as a thread (`addPullRequestReviewThread`). The review node id is
+  cached on `draft.pendingReviewId`, the comment node id on
+  `comment.pendingCommentId`.
+- A cached review id that went stale (submitted or discarded on GitHub) is
+  re-resolved once and the push retried.
+- Retract/update never touch a comment whose state on GitHub is no longer
+  `PENDING`: a submitted comment is left alone (retract just severs the
+  local link; update fails with a 502 naming the reason).
+- GitHub validates anchors on push, so a bad anchor surfaces as the 502
+  error on accept — there is no separate dry-run validation step.
 
 ### Style bootstrap (see docs/STYLE.md)
 

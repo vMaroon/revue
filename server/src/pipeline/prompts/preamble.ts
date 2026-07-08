@@ -1,11 +1,12 @@
-// Shared prompt preamble: PR meta, file table, and the unified diff with
-// per-file patches truncated so one huge file cannot blow the context.
+// Shared prompt preamble: PR meta, reviewer focus, file table, and the
+// unified diff with per-file patches truncated so one huge file cannot blow
+// the context.
 
 import type { PrSnapshot } from '../../interfaces';
 
 const MAX_PATCH_LINES = 400;
 
-export function buildPreamble(snapshot: PrSnapshot): string {
+export function buildPreamble(snapshot: PrSnapshot, focus?: string): string {
   const { meta, files } = snapshot;
   const lines: string[] = [];
 
@@ -21,6 +22,18 @@ export function buildPreamble(snapshot: PrSnapshot): string {
   lines.push('');
   lines.push(meta.body.trim() === '' ? '(no description)' : meta.body.trim());
   lines.push('');
+  if (focus !== undefined && focus.trim() !== '') {
+    lines.push('## Reviewer focus');
+    lines.push('');
+    lines.push(
+      'The reviewer asked this run to focus as follows. Weight your attention,' +
+        ' coverage, and severity toward it; it narrows emphasis but does not' +
+        ' forbid reporting a serious issue outside it.',
+    );
+    lines.push('');
+    lines.push(focus.trim());
+    lines.push('');
+  }
   lines.push('## Files changed');
   lines.push('');
   lines.push('| path | status | +/- |');

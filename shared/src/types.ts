@@ -100,6 +100,9 @@ export interface DraftComment {
   /** Diff hunk excerpt so the comment renders standalone even if DOM anchoring fails. */
   hunk?: string;
   anchor: AnchorState;
+  /** GraphQL node id of the pending-review comment this comment is synced to
+   *  on GitHub; present exactly while status is 'accepted'. */
+  pendingCommentId?: string;
   publishedUrl?: string;
   updatedAt: string;
 }
@@ -127,6 +130,11 @@ export interface ReviewDraft {
   comments: DraftComment[];
   /** Findings killed by verification, kept for transparency. */
   dropped: Finding[];
+  /** Reviewer-supplied focus instructions the pipeline steered around. */
+  focus?: string;
+  /** GraphQL node id of the viewer's pending GitHub review that accepted
+   *  comments sync into; cached after the first accept. */
+  pendingReviewId?: string;
   /** Total model cost of this review (pipeline plus per-comment chats), USD. */
   costUsd?: number;
   /** True when the PR head moved since the pipeline ran. */
@@ -160,25 +168,19 @@ export type RevueEvent =
 export interface CreateReviewRequest extends PrRef {
   /** Re-run the pipeline even if a draft exists. */
   force?: boolean;
+  /** Free-text focus instructions the pipeline steers around, e.g.
+   *  "concurrency in the producer path; ignore test files". */
+  focus?: string;
 }
 
 export interface PatchReviewRequest {
   summary?: string;
-  verdict?: ReviewVerdict;
 }
 
 export interface PatchCommentRequest {
   body?: string;
   status?: CommentStatus;
   severity?: Severity;
-}
-
-export interface AddCommentRequest {
-  path: string;
-  line: number;
-  side: Side;
-  startLine?: number;
-  body: string;
 }
 
 export interface ChatRequest {
@@ -191,20 +193,6 @@ export interface ChatResponse {
   revisedBody?: string;
 }
 
-export interface PublishRequest {
-  dryRun?: boolean;
-}
-
-export interface PublishValidation {
-  ok: boolean;
-  problems: { commentId: string; reason: string }[];
-  willPost: { comments: number; verdict: ReviewVerdict; summaryChars: number };
-}
-
-export interface PublishResult {
-  url: string;
-  at: string;
-}
 
 export interface HealthResponse {
   ok: boolean;

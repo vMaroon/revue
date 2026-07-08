@@ -14,10 +14,10 @@ Two processes, one shared type package:
 ```
 ┌────────────────────────┐   HTTP + SSE   ┌──────────────────────────────┐
 │ Chrome extension (MV3) │ <────────────> │ local daemon (localhost:7388)│
-│ overlay on github.com  │                │ pipeline · chats · publish   │
+│ overlay on github.com  │                │ pipeline · chats · sync      │
 └────────────────────────┘                └──────────┬───────────────────┘
                                                      │ Claude Agent SDK (your claude login)
-                                                     │ GitHub REST (your gh token)
+                                                     │ GitHub REST + GraphQL (your gh token)
                                                      ▼
                                        ~/.revue/  drafts · repo workdirs
 ```
@@ -34,11 +34,15 @@ rendering. The daemon exists because the browser can't run the Agent SDK,
 hold long-lived sessions, or keep repo checkouts; the extension stays a thin
 view over daemon state.
 
-**Draft state lives in the daemon, not GitHub.** GitHub's pending reviews
-can't host per-comment AI chats, provenance, or verification metadata, and
-API-created pending reviews are easy to fat-finger into submission. Local
-drafts publish atomically as one review — the Publish click is the only
-write to GitHub in the whole system.
+**Draft state lives in the daemon; accepted comments live on GitHub.**
+GitHub's pending reviews can't host per-comment AI chats, provenance, or
+verification metadata, so the draft — proposals, chats, evidence — stays
+local. Accepting a comment is the accept-quality gate: it immediately joins
+the viewer's pending review on GitHub (created on first accept, reused if
+one exists), un-accepting retracts it, and the review is submitted from
+GitHub's own "Finish your review" dialog. GitHub goes first on every sync;
+the local draft changes only after the write succeeds. Comments already
+submitted on GitHub are never edited or deleted from here.
 
 **Agent SDK over raw API.** Pipeline agents need repo tools (Read/Grep/
 git-log) to verify claims against actual code, chats need resumable
@@ -55,9 +59,9 @@ trust ("what did it throw away?").
 
 **Anchoring is best-effort, correctness lives server-side.** GitHub's DOM is
 unstable; only `extension/src/anchor.ts` knows about it, misses degrade to
-panel rendering with the comment's own hunk, and publish-time anchor
-validation happens in the daemon against the API diff — the DOM is never
-load-bearing for what gets posted.
+panel rendering with the comment's own hunk, and GitHub itself validates the
+anchor when an accepted comment is pushed to the pending review — the DOM is
+never load-bearing for what gets posted.
 
 **Token-gated localhost daemon.** Any local page can POST to 127.0.0.1;
 the shared secret (generated at `${dataDir}/secret`, pasted once into the
@@ -90,13 +94,17 @@ comment's SDK session; deltas ride the review SSE stream; the POST resolves
 with the reply and optional `revisedBody` (extracted from
 `<revised-comment>` tags).
 
-**Publish** — dry-run validates accepted comments against a live snapshot;
-real run posts one `POST /pulls/:n/reviews` with summary + verdict +
-comments, then marks everything published.
+**Accept** — `PATCH .../comments/:cid {status: 'accepted'}` → `sync.ts`
+resolves or creates the viewer's pending review (GraphQL,
+`github/pending.ts`), adds the comment as a thread, and records both node
+ids on the draft. Leaving `accepted` retracts; editing an accepted body
+rewrites it in place; a stale cached review id is re-resolved once and
+retried. The reviewer submits from GitHub, where the pending body arrives
+pre-seeded with the draft summary.
 
 **Staleness** — every fresh snapshot compares `headSha` to the draft's;
-mismatch sets `draft.stale` (banner in UI). Publishing re-validates against
-the live diff regardless, so stale drafts fail safe.
+mismatch sets `draft.stale` (banner in UI). GitHub validates anchors on
+every push regardless, so stale drafts fail safe.
 
 ## Failure modes
 
@@ -106,18 +114,18 @@ the live diff regardless, so stale drafts fail safe.
   results (already-drafted comments) remain usable; Re-run available.
 - Finder emits an unanchorable finding → auto-dropped with reason, never
   blocks the run.
-- GitHub 422 on publish → surfaced verbatim in the publish modal; draft
-  stays `ready`.
+- GitHub rejects a pending-review sync (bad anchor, stale review) → 502 with
+  the reason, surfaced on the comment card; the local draft is unchanged.
 - `gh` missing/unauthenticated → `GITHUB_TOKEN` env fallback; otherwise
   clear startup error (public repos still work unauthenticated for
-  fetch/clone, publish requires the token).
+  fetch/clone, pending-review sync requires the token).
 
 ## File ownership (build map)
 
 | Area | Files |
 |---|---|
-| core daemon | `server/src/{index,app,routes,store,events,config,auth,log,control}.ts` |
-| github | `server/src/github/{client,workdir,diff,publish}.ts` |
+| core daemon | `server/src/{index,app,routes,store,events,config,auth,log,control,sync}.ts` |
+| github | `server/src/github/{client,workdir,diff,pending}.ts` |
 | pipeline | `server/src/pipeline/{runner,agent,dedupe,schemas}.ts`, `server/src/pipeline/prompts/{preamble,triage,finders,verify,voice,learned}.ts` |
 | chat | `server/src/chat/{service,prompts}.ts` |
 | learning | `server/src/learn/{service,prompts}.ts` |

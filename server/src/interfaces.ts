@@ -9,8 +9,6 @@ import type {
   PrFile,
   PrMeta,
   PrRef,
-  PublishResult,
-  PublishValidation,
   RevueConfig,
   RevueEvent,
   ReviewDraft,
@@ -71,6 +69,14 @@ export interface UserCommentsOptions {
   onProgress?: (prsScanned: number, prsTotal: number, comments: number) => void;
 }
 
+/** Diff location a pending-review comment attaches to. */
+export interface PendingAnchor {
+  path: string;
+  line: number;
+  side: Side;
+  startLine?: number;
+}
+
 export interface GithubService {
   /** PR metadata plus per-file patches, via the GitHub REST API. */
   fetchPr(ref: PrRef): Promise<PrSnapshot>;
@@ -87,14 +93,20 @@ export interface GithubService {
   ensureWorkdir(meta: PrMeta): Promise<string>;
   /** Login of the authenticated user, if a token is available. */
   ghUser(): Promise<string | undefined>;
-  /** Anchor-check every accepted comment against the live diff. */
-  validate(draft: ReviewDraft, snapshot: PrSnapshot): PublishValidation;
-  /**
-   * Post summary + accepted comments as a single PR review
-   * (POST /repos/{o}/{r}/pulls/{n}/reviews with event = draft.verdict).
-   * Caller has already validated.
-   */
-  publish(draft: ReviewDraft, snapshot: PrSnapshot): Promise<PublishResult>;
+  // Pending-review operations (GraphQL; all require an authenticated token).
+  // server/src/sync.ts orchestrates these; see docs/API.md "Pending review".
+  /** Node ids of the PR and of the viewer's pending review on it, if any. */
+  findPendingReview(ref: PrRef): Promise<{ pullRequestId: string; pendingReviewId?: string }>;
+  /** Creates a pending review seeded with `body`; returns its node id. */
+  createPendingReview(pullRequestId: string, body: string): Promise<string>;
+  /** Adds a comment to the pending review; returns the comment node id. */
+  addPendingComment(pendingReviewId: string, anchor: PendingAnchor, body: string): Promise<string>;
+  /** Rewrites a pending comment's body; throws when it is gone or submitted. */
+  updatePendingComment(commentId: string, body: string): Promise<void>;
+  /** Deletes a pending comment; no-op when already gone or submitted. */
+  deletePendingComment(commentId: string): Promise<void>;
+  /** Rewrites the pending review's top-level body. */
+  updatePendingReviewBody(pendingReviewId: string, body: string): Promise<void>;
 }
 
 // Pure helpers exported by server/src/github/diff.ts (also used by the

@@ -71,8 +71,12 @@ async function run(draft: ReviewDraft, deps: PipelineDeps): Promise<void> {
 
     // -- context ------------------------------------------------------------
     setStage('context', 'running');
-    const preamble = buildPreamble(snapshot);
-    setStage('context', 'done', `${snapshot.files.length} files at ${snapshot.meta.headSha.slice(0, 7)}`);
+    const preamble = buildPreamble(snapshot, draft.focus);
+    setStage(
+      'context',
+      'done',
+      `${snapshot.files.length} files at ${snapshot.meta.headSha.slice(0, 7)}${draft.focus !== undefined ? '; focused' : ''}`,
+    );
 
     // -- triage --------------------------------------------------------------
     setStage('triage', 'running');

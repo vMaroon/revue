@@ -68,9 +68,11 @@ each mutation):
 
 ### 1. context
 Already-fetched `PrSnapshot` + `ensureWorkdir` checkout. Builds the shared
-prompt preamble: PR title/body/author/branches, file list with +/- counts,
-and the full unified diff (per-file patches truncated at ~400 lines with a
-note; finders read the rest from the workdir).
+prompt preamble: PR title/body/author/branches, the reviewer's focus
+(`draft.focus`, when the run was requested with one) as a section that
+weights attention without forbidding findings outside it, file list with
++/- counts, and the full unified diff (per-file patches truncated at ~400
+lines with a note; finders read the rest from the workdir).
 
 ### 2. triage — `models.triage`
 No repo access needed (`cwd` still set, `maxTurns: 1`). Input: preamble.

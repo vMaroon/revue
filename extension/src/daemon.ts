@@ -2,15 +2,12 @@
 // round-trip through the service worker; SSE rides a long-lived port.
 
 import type {
-  AddCommentRequest,
   ChatResponse,
   DraftComment,
   HealthResponse,
   PatchCommentRequest,
   PatchReviewRequest,
   PrRef,
-  PublishResult,
-  PublishValidation,
   ReviewDraft,
 } from '@revue/shared';
 import type { BgRequest, BgResponse, DaemonClient, SsePortMessage } from './lib/contract';
@@ -52,12 +49,13 @@ export function createDaemonClient(): DaemonClient {
       }
     },
 
-    createReview(pr: PrRef, force?: boolean) {
+    createReview(pr: PrRef, force?: boolean, focus?: string) {
       return request<ReviewDraft>('POST', '/reviews', {
         owner: pr.owner,
         repo: pr.repo,
         number: pr.number,
         force,
+        focus,
       });
     },
 
@@ -86,33 +84,12 @@ export function createDaemonClient(): DaemonClient {
       );
     },
 
-    addComment(id: string, req: AddCommentRequest) {
-      return request<DraftComment>('POST', `/reviews/${encodeURIComponent(id)}/comments`, req);
-    },
-
-    async deleteComment(id: string, cid: string) {
-      await request<unknown>(
-        'DELETE',
-        `/reviews/${encodeURIComponent(id)}/comments/${encodeURIComponent(cid)}`,
-      );
-    },
-
     chat(id: string, cid: string, message: string) {
       return request<ChatResponse>(
         'POST',
         `/reviews/${encodeURIComponent(id)}/comments/${encodeURIComponent(cid)}/chat`,
         { message },
       );
-    },
-
-    publishDryRun(id: string) {
-      return request<PublishValidation>('POST', `/reviews/${encodeURIComponent(id)}/publish`, {
-        dryRun: true,
-      });
-    },
-
-    publish(id: string) {
-      return request<PublishResult>('POST', `/reviews/${encodeURIComponent(id)}/publish`, {});
     },
 
     openControlPage() {

@@ -1,8 +1,9 @@
 # Contributing
 
 Thanks for looking. revue is a local-first tool with a small, typed codebase; the
-bar for a change is that it stays simple, keeps GitHub writes behind the single
-Publish action, and is covered by a test where the logic is non-trivial.
+bar for a change is that it stays simple, keeps GitHub writes confined to the
+viewer's own pending review, and is covered by a test where the logic is
+non-trivial.
 
 ## Setup
 
@@ -28,7 +29,7 @@ CI runs the same three on every PR. Green is required.
 ## Where things live
 
 - `shared/` — wire types shared by both processes. Change here ripples to both; keep it minimal.
-- `server/` — the daemon: pipeline, chats, GitHub client, publish. Pure logic (`pipeline/dedupe`, `github/diff`, `config`, `auth`) is unit-tested under `server/test/`.
+- `server/` — the daemon: pipeline, chats, GitHub client, pending-review sync. Pure logic (`pipeline/dedupe`, `github/diff`, `github/pending`, `sync`, `config`, `auth`) is unit-tested under `server/test/`.
 - `extension/` — the MV3 Chrome extension: overlay, panel, anchoring.
 - `docs/` — architecture and internals. Update the relevant doc when a change is user-visible.
 

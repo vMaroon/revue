@@ -154,8 +154,15 @@ export function createCard(comment: DraftComment, ctx: CardContext): CardHandle 
       row.appendChild(
         h(
           'button',
-          { class: `rv-btn${accepted ? ' rv-btn-on' : ''}`, disabled: busy || undefined, onclick: () => void setStatus(accepted ? 'proposed' : 'accepted') },
-          accepted ? 'Accepted' : 'Accept',
+          {
+            class: `rv-btn${accepted ? ' rv-btn-on' : ''}`,
+            disabled: busy || undefined,
+            title: accepted
+              ? 'In your pending GitHub review; click to retract'
+              : 'Add to your pending GitHub review',
+            onclick: () => void setStatus(accepted ? 'proposed' : 'accepted'),
+          },
+          accepted ? 'Pending on GitHub' : 'Accept',
         ),
       );
       const discarded = current.status === 'discarded';
@@ -165,14 +172,11 @@ export function createCard(comment: DraftComment, ctx: CardContext): CardHandle 
           {
             class: `rv-btn${discarded ? ' rv-btn-on' : ''}`,
             disabled: busy || undefined,
-            onclick: () => void setStatus(discarded ? (current.origin === 'manual' ? 'accepted' : 'proposed') : 'discarded'),
+            onclick: () => void setStatus(discarded ? 'proposed' : 'discarded'),
           },
           discarded ? 'Restore' : 'Discard',
         ),
       );
-      if (current.origin === 'manual') {
-        row.appendChild(h('button', { class: 'rv-btn rv-btn-danger', disabled: busy || undefined, onclick: () => void remove() }, 'Delete'));
-      }
     }
     row.appendChild(h('button', { class: `rv-btn${chatOpen ? ' rv-btn-on' : ''}`, onclick: toggleChat }, 'Chat'));
     return row;
@@ -240,23 +244,6 @@ export function createCard(comment: DraftComment, ctx: CardContext): CardHandle 
       busy = false;
       render();
       ctx.onLocalUpdate(updated);
-    } catch (e) {
-      busy = false;
-      error = errorMessage(e);
-      render();
-    }
-  }
-
-  async function remove(): Promise<void> {
-    if (busy) return;
-    busy = true;
-    error = null;
-    render();
-    try {
-      await ctx.client.deleteComment(ctx.reviewId, current.id);
-      // The comment-removed SSE event tears the card down.
-      busy = false;
-      render();
     } catch (e) {
       busy = false;
       error = errorMessage(e);

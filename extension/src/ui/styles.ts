@@ -123,6 +123,7 @@ textarea.rv-input { resize: vertical; min-height: 64px; font-family: inherit; }
 .rv-pr-ref { color: var(--rv-fg-muted); font-size: 12px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rv-head-title { margin-top: 4px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rv-head-actions { margin-top: 8px; display: flex; gap: 8px; }
+.rv-focus-input { margin-top: 8px; min-height: 38px; font-size: 12px; }
 .rv-icon-btn {
   background: none; border: none; font: inherit; font-size: 14px; font-weight: 700;
   color: var(--rv-fg-muted); cursor: pointer; padding: 0 4px; flex: none;
@@ -138,7 +139,8 @@ textarea.rv-input { resize: vertical; min-height: 64px; font-family: inherit; }
 .rv-status-chip-error { background: var(--rv-del-bg); color: var(--rv-danger); }
 .rv-body { flex: 1; overflow-y: auto; padding: 10px 12px 16px; }
 .rv-foot { flex: none; padding: 10px 12px; border-top: 1px solid var(--rv-border); background: var(--rv-bg-soft); }
-.rv-publish { width: 100%; padding: 7px 10px; font-size: 13px; text-align: center; display: block; }
+.rv-finish { width: 100%; padding: 7px 10px; font-size: 13px; text-align: center; display: block; }
+.rv-foot-hint { font-size: 12px; text-align: center; }
 .rv-section { margin-bottom: 14px; }
 .rv-section-title {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
@@ -169,9 +171,8 @@ textarea.rv-input { resize: vertical; min-height: 64px; font-family: inherit; }
 .rv-stage-findings { font-size: 12px; margin-top: 2px; }
 @keyframes rv-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-/* ---- summary / verdict ---- */
-.rv-verdict-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; }
-.rv-verdict-row .rv-select { width: auto; flex: 1; }
+/* ---- summary ---- */
+.rv-verdict-hint { font-size: 10.5px; text-transform: none; letter-spacing: 0; font-weight: 600; }
 
 /* ---- comment list ---- */
 .rv-file-head {
@@ -218,11 +219,6 @@ textarea.rv-input { resize: vertical; min-height: 64px; font-family: inherit; }
 .rv-dropped-head { display: flex; gap: 6px; align-items: center; margin-bottom: 3px; }
 .rv-dropped-claim { font-size: 12px; }
 .rv-dropped-notes { font-size: 11.5px; color: var(--rv-fg-muted); margin-top: 3px; }
-
-/* ---- add comment form ---- */
-.rv-add-grid { display: grid; grid-template-columns: 1fr 68px 80px; gap: 6px; margin: 6px 0; }
-.rv-add-path { margin-bottom: 6px; }
-.rv-add-body { margin-bottom: 4px; }
 
 /* ---- comment card ---- */
 .rv-card {
@@ -336,25 +332,4 @@ a.rv-evidence-loc:hover { text-decoration: underline; }
   overflow-wrap: anywhere; background: var(--rv-bg); border-radius: 6px;
   padding: 7px 9px; max-height: 200px; overflow-y: auto;
 }
-
-/* ---- publish modal ---- */
-.rv-modal-backdrop {
-  position: fixed; inset: 0; background: rgba(15, 10, 35, 0.45);
-  z-index: 2147483001; display: flex; align-items: center; justify-content: center;
-}
-.rv-modal {
-  width: 420px; max-width: 92vw; max-height: 80vh; overflow-y: auto;
-  background: var(--rv-bg); border: 1px solid var(--rv-border); border-radius: 10px;
-  box-shadow: var(--rv-shadow); padding: 16px;
-}
-.rv-modal-title { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
-.rv-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-.rv-publish-stats { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; margin-bottom: 10px; }
-.rv-summary-preview {
-  background: var(--rv-bg-soft); border: 1px solid var(--rv-border); border-radius: 6px;
-  padding: 8px 10px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere;
-  max-height: 140px; overflow-y: auto; margin-bottom: 10px;
-}
-.rv-problems { margin: 0 0 6px; padding-left: 18px; font-size: 12px; }
-.rv-problem { margin: 3px 0; }
 `;

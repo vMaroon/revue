@@ -6,9 +6,9 @@
 
 The pipeline is prompt-driven, so it learns the way the prompts do: by growing
 a preference file that feeds back into future reviews. When you change a
-drafted comment before publishing, the daemon captures the delta and distills a
-durable lesson into `preferences/learnings.md`, which is injected into the
-finder, drafting, and chat prompts on the next run.
+drafted comment, the daemon captures the delta and distills a durable lesson
+into `preferences/learnings.md`, which is injected into the finder, drafting,
+and chat prompts on the next run.
 
 This is the refinement half of a pair: the [style bootstrap](STYLE.md) seeds
 `voice.md`/`priorities.md` from your public GitHub comments; corrections then

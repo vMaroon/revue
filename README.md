@@ -14,7 +14,8 @@
 </p>
 
 **A friendly claw for your pull requests.** Draft your whole review privately,
-converge on it with Claude, then publish once — as a single GitHub review.
+converge on it with Claude, and accept your way into a pending GitHub review
+you submit from GitHub itself.
 
 <sub>[Quickstart](#quickstart) · [First review](#your-first-review) · [Why revue](#why-revue) · [Docs](#documentation)</sub>
 
@@ -22,9 +23,11 @@ converge on it with Claude, then publish once — as a single GitHub review.
 
 A PR review is high-stakes writing you usually do in one pass, in a textarea,
 with no second opinion. revue stages it instead: an agentic reviewer reads the
-PR, drafts comments in your voice, and lays them over the actual GitHub diff.
-You edit, chat, and cut in private — then publish everything as one review.
-It reads like you wrote it, because you did the last pass.
+PR — focused on whatever you tell it to weight — drafts comments in your
+voice, and lays them over the actual GitHub diff. You edit, chat, and cut in
+private; each comment you accept joins your pending GitHub review on the
+spot, and you submit from GitHub's own dialog. It reads like you wrote it,
+because you did the last pass.
 
 ## Quickstart
 
@@ -51,20 +54,23 @@ Prereqs, if you'd rather check by hand: Node 20+, the
 ## Your first review
 
 1. Open a PR on **github.com** and hit the floating **Revue** button → **Run
-   review**. Progress streams into the side panel; draft comments appear under
-   their diff lines as they're written.
+   review**. Want a custom-focus review? Type what to weight first ("the
+   concurrency in the producer path; skip test files"). Progress streams into
+   the side panel; draft comments appear under their diff lines as they're
+   written.
 2. **Converge.** Edit a comment inline, change its severity, or discard it.
    Chat on any comment — *Tighten*, *Make it a nit*, *Re-verify*, *Steelman
-   the author* — and apply the rewrite it proposes with one click. Add your
-   own comments; set the summary and the verdict.
-3. **Publish.** A preview shows exactly what will post, re-checked against the
-   live diff; one click posts it all as a single GitHub review under your
-   account.
+   the author* — and apply the rewrite it proposes with one click.
+3. **Accept.** Every comment you accept immediately joins your **pending
+   review on GitHub** (created for you, reused if you already started one);
+   un-accepting retracts it. When you're done, **Finish review on GitHub** —
+   verdict and final wording in GitHub's own submit dialog, pre-seeded with
+   the drafted summary.
 
 If the PR gets new pushes mid-review, the draft is marked stale — your edits
-survive, and anchors are re-validated at publish time regardless. Comments the
-page can't anchor still render in the panel with their own diff snippet, so
-nothing is ever lost.
+survive, and GitHub re-validates every anchor as comments are pushed.
+Comments the page can't anchor still render in the panel with their own diff
+snippet, so nothing is ever lost.
 
 ## Why revue
 
@@ -82,9 +88,9 @@ nothing is ever lost.
 - 💬 **Converge, don't rewrite** — each comment carries its own repo-aware
   chat thread, so tightening, softening, or fact-checking a draft is a
   message, not a rewrite.
-- 🔒 **Nothing posts until you say so** — the review stays local until you
-  click **Publish**, and that click is the only thing that ever writes to
-  GitHub.
+- 🔒 **Nothing posts until you say so** — drafts stay local; accepting a
+  comment stages it in your *pending* GitHub review (visible only to you),
+  and nothing goes to the author until you submit on GitHub.
 - 🧪 **Zero-cost dry run** — `npm run mock` exercises the entire flow with
   canned model output. No tokens spent, real UI.
 
@@ -95,9 +101,9 @@ Two pieces: a Chrome extension that renders the overlay, and a local daemon
 runs a cost-tiered multi-model pipeline (cheap models scan broadly; strong
 models verify adversarially, then write in your voice) through the Claude
 Agent SDK on your existing `claude` login and `gh` token. Pipeline and chat
-agents get read-only tools; draft state lives in `~/.revue`; publishing is the
-single write path to GitHub. The full picture:
-[ARCHITECTURE](docs/ARCHITECTURE.md) · [PIPELINE](docs/PIPELINE.md).
+agents get read-only tools; draft state lives in `~/.revue`; the only GitHub
+writes are to your own pending review, mirroring what you accept. The full
+picture: [ARCHITECTURE](docs/ARCHITECTURE.md) · [PIPELINE](docs/PIPELINE.md).
 
 ## Configuration
 
@@ -134,7 +140,7 @@ Rough order, not a promise. Issues and PRs against any of these are welcome.
 
 - **Chrome Web Store listing** so install is one click instead of load-unpacked.
 - **One-command daemon start** (`npx revue`) that provisions the secret and prints the extension token.
-- **GitLab and Bitbucket** overlays behind the same publish-once model.
+- **GitLab and Bitbucket** overlays behind the same pending-review model.
 - **Reviewer presets** — shareable `voice.md` / `priorities.md` bundles for a team.
 - **Wider pipeline test coverage** as the finder/verify stages grow.
 
