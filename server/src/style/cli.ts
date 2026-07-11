@@ -4,13 +4,15 @@
 // Direct mode - no daemon required, and the daemon's staged bootstrap state
 // is not touched. Usage:
 //
-//   npm run style              dry run: profile + proposed-file diffs
-//   npm run style -- --apply   also write voice.md, priorities.md, style-profile.md
+//   npm run style                    dry run: profile + proposed-file diffs
+//   npm run style -- --apply         also write voice.md, priorities.md, style-profile.md
+//   npm run style -- --interactive   dry run, then ask whether to apply
 
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import type { StyleObservation } from '@revue/shared';
 import { loadConfig, projectRoot } from '../config';
 import { createGithubService } from '../github/client';
@@ -18,6 +20,7 @@ import { createAgentInvoker } from '../pipeline/agent';
 import { analyzeStyle, writeStyleFiles } from './service';
 
 const apply = process.argv.includes('--apply');
+const interactive = process.argv.includes('--interactive');
 const config = loadConfig();
 const github = createGithubService(config);
 const invoker = createAgentInvoker(config);
@@ -56,6 +59,18 @@ function showDiff(name: 'voice' | 'priorities', proposed: string): void {
     out(diff.stdout.split('\n').slice(4).join('\n'));
   }
   rmSync(scratch, { recursive: true, force: true });
+}
+
+async function confirmApply(): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  // stdin EOF (piped input already consumed) counts as "no": never write on
+  // an answer nobody gave.
+  const eof = new Promise<string>((resolve) => rl.once('close', () => resolve('n')));
+  const answer = (await Promise.race([rl.question('apply these files now? [Y/n]: '), eof]))
+    .trim()
+    .toLowerCase();
+  rl.close();
+  return answer === '' || answer.startsWith('y');
 }
 
 const started = Date.now();
@@ -99,7 +114,7 @@ try {
   showDiff('priorities', analysis.proposal.prioritiesMd);
 
   out();
-  if (apply) {
+  if (apply || (interactive && (await confirmApply()))) {
     writeStyleFiles(analysis);
     out('applied: preferences/voice.md, preferences/priorities.md written;');
     out('evidence saved to preferences/style-profile.md.');
@@ -107,6 +122,8 @@ try {
     out('effect: both files are injected into every finder, draft, and chat');
     out('prompt from the next review on. A running daemon picks them up on the');
     out('next read - no restart. Tune or revert any of it on the control page.');
+  } else if (interactive) {
+    out('nothing written. Apply later with: npm run style -- --apply');
   } else {
     out('dry run: nothing written. Apply with: npm run style -- --apply');
   }

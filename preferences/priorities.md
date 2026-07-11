@@ -1,11 +1,14 @@
 # Review priorities
 
 What I care about when reviewing, in order. Loaded into every finder prompt.
-Context: I work mostly in Go on distributed systems and LLM inference
-infrastructure (llm-d, Kubernetes ecosystem); calibrate examples and
-severity to that world, but apply the principles to any language in the PR.
 
 Note: always follow repo context and standards.
+
+## Reviewer context
+
+I work mostly in Go on distributed systems and LLM inference infrastructure
+(llm-d, Kubernetes ecosystem); calibrate examples and severity to that
+world, but apply the principles to any language in the PR.
 
 ## Severity rubric
 

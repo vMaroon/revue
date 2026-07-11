@@ -32,9 +32,17 @@ because you did the last pass.
 ## Quickstart
 
 ```sh
-npm run setup     # checks prereqs (Node 20+, gh auth, Claude login), installs, builds
+npm run setup     # prereqs (Node 20+, gh auth, Claude login), install, build, then
+                  # a short guided customization — Enter accepts every default
 npm start         # daemon on 127.0.0.1:7388; the first run opens a guided setup page
 ```
+
+Setup ends with three optional questions: how you pay for Claude (tunes agent
+parallelism), one line of reviewer context (your stack and focus, fed to every
+finder), and whether to learn your review voice from your public GitHub PR
+comments right there — you see the evidence-backed proposal and approve before
+anything is written. Enter through all of it for stock defaults; `--defaults`
+skips the questions entirely.
 
 The first boot opens a one-time welcome page that hands you the token and walks
 the three steps:
@@ -45,7 +53,8 @@ the three steps:
 2. **Connect it** — copy the token from the welcome card into the extension's
    options page.
 3. **Make it sound like you** — scan your public GitHub PR comments into a
-   proposed review voice, review the evidence, apply it.
+   proposed review voice, review the evidence, apply it (already done if you
+   said yes during setup).
 
 Prereqs, if you'd rather check by hand: Node 20+, the
 [`gh` CLI](https://cli.github.com) authenticated, and Claude Code logged in

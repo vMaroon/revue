@@ -87,9 +87,13 @@ then-current files (including accumulated learnings) as the baseline.
 ## Running it from the terminal
 
 ```sh
-npm run style              # dry run: profile + proposed-file diffs, writes nothing
-npm run style -- --apply   # also writes voice.md, priorities.md, style-profile.md
+npm run style                    # dry run: profile + proposed-file diffs, writes nothing
+npm run style -- --apply         # also writes voice.md, priorities.md, style-profile.md
+npm run style -- --interactive   # dry run, then asks whether to apply
 ```
+
+`npm run setup` offers the interactive form as its final step, so a fresh
+install can bootstrap the voice before the daemon ever starts.
 
 `server/src/style/cli.ts` runs the same scan and analysis directly — no daemon
 needed, and the daemon's staged bootstrap state is untouched. It prints the

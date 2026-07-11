@@ -7,6 +7,8 @@ All notable changes are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Guided customization in `npm run setup`: Claude billing (tunes `maxParallel`), one line of reviewer context written to `preferences/priorities.md`, and an optional voice scan of your public PR comments — every question defaults sensibly, `--defaults` skips them all, `--customize` forces them without a TTY.
+- `npm run style -- --interactive`: dry-run profile and diffs, then a single confirmation before applying.
 - Built-in anti-slop baseline (`server/src/pipeline/prompts/antislop.ts`) injected ahead of `voice.md` in the drafting and chat prompts, so comments read human before any personalization; voice rules override it on conflict, and the style bootstrap writes only overrides where the corpus contradicts it.
 - Server unit tests (`node --test` via `tsx`) for diff parsing, anchor validation, dedupe, config, and auth.
 - CI workflow: typecheck, test, and build on every push and pull request.
