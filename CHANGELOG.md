@@ -7,6 +7,7 @@ All notable changes are recorded here. The format follows
 ## [Unreleased]
 
 ### Added
+- Built-in anti-slop baseline (`server/src/pipeline/prompts/antislop.ts`) injected ahead of `voice.md` in the drafting and chat prompts, so comments read human before any personalization; voice rules override it on conflict, and the style bootstrap writes only overrides where the corpus contradicts it.
 - Server unit tests (`node --test` via `tsx`) for diff parsing, anchor validation, dedupe, config, and auth.
 - CI workflow: typecheck, test, and build on every push and pull request.
 - `npm run package` builds a distributable extension zip; a tag-triggered release workflow attaches it to a GitHub Release.

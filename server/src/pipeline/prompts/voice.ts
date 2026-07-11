@@ -3,6 +3,7 @@
 
 import type { Finding } from '@revue/shared';
 import { readPreference } from '../../config';
+import { ANTISLOP_RULES } from './antislop';
 import { learnedSection } from './learned';
 
 function loadVoice(): string {
@@ -38,6 +39,10 @@ the verified findings below. Each finding carries its verification verdict and
 notes (what was actually checked); ground every claim in those notes, and
 qualify comments whose verification is UNCERTAIN instead of asserting them.
 
+## Baseline writing rules
+
+${ANTISLOP_RULES}
+
 ## Voice rules (follow verbatim)
 
 ${loadVoice()}
@@ -51,9 +56,11 @@ ${findingsJson.length > 0 && findings.length > 0 ? findingsJson : '(no findings 
 Report:
 - comments: one entry per finding worth posting, keyed by its findingId.
   Each entry: { findingId, severity, body }. The body is the full markdown
-  comment as it would be posted to GitHub, written per the voice rules. Keep
-  the finding's severity unless the verification notes justify changing it.
-- summary: the top-level review body per the voice rules' Summary section.
+  comment as it would be posted to GitHub, written per the baseline and voice
+  rules. Keep the finding's severity unless the verification notes justify
+  changing it.
+- summary: the top-level review body per the baseline summary defaults and
+  the voice rules.
 - verdict: "REQUEST_CHANGES" only when at least one CONFIRMED blocking finding
   remains; "APPROVE" when nothing blocking remains and the PR is sound;
   otherwise "COMMENT".`;

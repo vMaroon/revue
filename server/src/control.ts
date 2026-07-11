@@ -115,7 +115,7 @@ export function controlPage(): string {
 
     <div class="card">
       <h2>Review voice</h2>
-      <p class="hint">preferences/voice.md &mdash; the rules that shape every drafted comment and the summary. Applies to the next review and chat.</p>
+      <p class="hint">preferences/voice.md &mdash; the rules that shape every drafted comment and the summary, layered over the built-in anti-slop baseline (your rules win on conflict). Applies to the next review and chat.</p>
       <textarea id="voice" spellcheck="false"></textarea>
     </div>
 
