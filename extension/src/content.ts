@@ -1,6 +1,7 @@
 // Bootstrap: runs on every github.com page, detects PR routes (including
 // soft SPA navigations), mounts/destroys the panel, loads the initial draft,
-// and wires the SSE subscription when a draft exists.
+// and wires the SSE subscription when a draft exists or Run review creates
+// one.
 
 import type { PrRef, RevueEvent } from '@revue/shared';
 import type { PanelHandle } from './lib/contract';
@@ -24,6 +25,31 @@ function samePr(a: PrRef, b: PrRef): boolean {
   return a.owner === b.owner && a.repo === b.repo && a.number === b.number;
 }
 
+// One subscription per mount: review ids are stable per PR, so a re-run
+// streams over the same subscription. The event hub does not replay, so on
+// every stream open (first connect and each reconnect) the draft is refetched
+// once to reconcile frames emitted before the stream was listening.
+function wireSubscription(m: Mounted, id: string): void {
+  if (m.unsubscribe) return;
+  m.unsubscribe = client.subscribe(
+    id,
+    (e: RevueEvent) => {
+      if (mounted === m) m.panel.handleEvent(e);
+    },
+    (s) => {
+      if (s.state !== 'open' || mounted !== m) return;
+      client
+        .getReviewByPr(m.pr)
+        .then((draft) => {
+          if (mounted === m && draft) m.panel.setDraft(draft);
+        })
+        .catch(() => {
+          // refetch is best-effort; the next event or reconnect reconciles
+        });
+    },
+  );
+}
+
 async function evaluateRoute(): Promise<void> {
   const anchorer = createAnchorer();
   const pr = anchorer.getPrRef();
@@ -35,7 +61,10 @@ async function evaluateRoute(): Promise<void> {
   }
   if (!pr || mounted) return;
 
-  const panel = mountPanel(client, anchorer, pr);
+  const panel = mountPanel(client, anchorer, pr, (draft) => {
+    // Run review created the draft after mount; start streaming its events.
+    if (mounted && samePr(mounted.pr, pr)) wireSubscription(mounted, draft.id);
+  });
   const m: Mounted = { pr, panel, unsubscribe: null };
   mounted = m;
 
@@ -51,11 +80,7 @@ async function evaluateRoute(): Promise<void> {
     const draft = await client.getReviewByPr(pr); // 404 → null → "Run review" state
     if (mounted !== m) return;
     panel.setDraft(draft);
-    if (draft) {
-      m.unsubscribe = client.subscribe(draft.id, (e: RevueEvent) => {
-        if (mounted === m) panel.handleEvent(e);
-      });
-    }
+    if (draft) wireSubscription(m, draft.id);
   } catch (err) {
     if (mounted !== m) return;
     if (err instanceof RevueHttpError && err.status === 401) {

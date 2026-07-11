@@ -6,6 +6,9 @@ All notable changes are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- The first review run on a PR streamed no live progress until a page refresh: the SSE subscription was only wired when a draft existed at mount, never after **Run review** created one. The panel now hands the new draft back to the bootstrap, which subscribes on the spot; and since the event hub does not replay, every stream open refetches the draft once to reconcile frames emitted before the stream was listening.
+
 ### Added
 - Guided customization in `npm run setup`: Claude billing (tunes `maxParallel`), one line of reviewer context written to `preferences/priorities.md`, and an optional voice scan of your public PR comments — every question defaults sensibly, `--defaults` skips them all, `--customize` forces them without a TTY.
 - `npm run style -- --interactive`: dry-run profile and diffs, then a single confirmation before applying.

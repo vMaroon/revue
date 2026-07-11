@@ -27,7 +27,7 @@ const STAGES: { id: PipelineStage; label: string }[] = [
 
 const SEVERITY_ORDER: Record<Severity, number> = { blocking: 0, suggestion: 1, nit: 2 };
 
-export const mountPanel: MountPanel = (client, anchorer, pr) => {
+export const mountPanel: MountPanel = (client, anchorer, pr, onDraftCreated) => {
   // Draft ids are deterministic, so the review can be addressed before the
   // first snapshot arrives.
   const reviewId = `${pr.owner}__${pr.repo}__${pr.number}`;
@@ -308,6 +308,7 @@ export const mountPanel: MountPanel = (client, anchorer, pr) => {
       liveFindings.clear();
       draft = d;
       renderAll();
+      onDraftCreated?.(d);
     } catch (e) {
       if (!destroyed) showNotice(`Run failed: ${errorMessage(e)}`);
     }

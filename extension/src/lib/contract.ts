@@ -126,5 +126,13 @@ export interface PanelHandle {
  * editor, review-focus input), and per-comment chat threads. Accepted
  * comments live in the viewer's pending GitHub review; the review is
  * submitted from GitHub's own UI.
+ *
+ * onDraftCreated fires when Run review creates a draft, so the bootstrap can
+ * wire the SSE subscription for a review born after mount.
  */
-export type MountPanel = (client: DaemonClient, anchorer: Anchorer, pr: PrRef) => PanelHandle;
+export type MountPanel = (
+  client: DaemonClient,
+  anchorer: Anchorer,
+  pr: PrRef,
+  onDraftCreated?: (draft: ReviewDraft) => void,
+) => PanelHandle;

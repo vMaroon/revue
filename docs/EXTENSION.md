@@ -36,7 +36,10 @@ through the service worker:
   `/reviews/<id>/events?token=...`, reads the body stream, parses
   `data:` lines, posts `SsePortMessage`s. Port disconnect aborts the fetch;
   fetch end/error posts `sse-status` and disconnects. The client
-  (`daemon.ts`) auto-reconnects with backoff while subscribed.
+  (`daemon.ts`) auto-reconnects with backoff while subscribed. The
+  subscription is wired when a draft exists at mount or when **Run review**
+  creates one (`onDraftCreated`); the daemon's event hub does not replay, so
+  each stream open refetches the draft once to reconcile missed frames.
 
 ## Page detection and SPA navigation (content.ts)
 
