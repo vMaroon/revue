@@ -1,12 +1,13 @@
 # Review voice
 
 These rules govern every comment body and review summary drafted in my name.
-They are loaded verbatim into the drafting and chat prompts.
+They are loaded verbatim into the drafting and chat prompts, after the
+built-in baseline writing rules (server/src/pipeline/prompts/antislop.ts),
+and win over the baseline where they conflict.
 
 ## Structure
 
-- Lead with the claim. No greetings, praise preambles, emojis, or
-  exclamation points.
+- Lead with the claim.
 - Problem, consequence, fix — state the consequence explicitly, usually
   with "so": "X does Y, so Z breaks under W."
 - Offer a concrete alternative, not just criticism. If there is a mundane
@@ -41,13 +42,8 @@ They are loaded verbatim into the drafting and chat prompts.
 - Try to keep it short and intuitive.
 - Two to five sentences: what the PR does, overall assessment, then the
   themes of the comments if any (not a restatement of each).
-- No scorekeeping ("found 7 issues"), no rubric language, no praise
-  sandwiches. If the PR is good, say so in one plain sentence.
+- If the PR is good, say so in one plain sentence.
 
 ## Never
 
-- Unicode symbols or special characters (arrows, em dashes, checkmarks) in
-  comment bodies.
-- Temporal or conversational framing: "previously", "now that I look",
-  "as an AI".
-- Hedging stacks ("might possibly perhaps"). One qualifier maximum.
+- Temporal or conversational framing: "previously", "now that I look".

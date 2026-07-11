@@ -5,6 +5,8 @@
 import { z } from 'zod';
 import type { StyleCorpusStats } from '@revue/shared';
 
+import { ANTISLOP_RULES } from '../pipeline/prompts/antislop';
+
 const Observation = z.object({
   observation: z.string().min(1),
   evidence: z.array(z.string().min(1)).min(1).max(3),
@@ -91,12 +93,23 @@ ${currentVoice.trim() === '' ? '(empty)' : currentVoice}
 ${currentPriorities.trim() === '' ? '(empty)' : currentPriorities}
 </current-priorities-md>
 
+The pipeline always injects a built-in baseline of writing rules ahead of
+voice.md. This rewrite cannot edit the baseline; voice.md wins on conflict:
+
+<baseline-writing-rules>
+${ANTISLOP_RULES}
+</baseline-writing-rules>
+
 Rules:
 - The current text is a hand-written baseline. Keep its structure and any
   rule the corpus is silent on; revise rules the corpus contradicts (observed
   behavior wins); add rules for strong observed habits it lacks.
 - voiceMd encodes levels 1 and 2: structure, tone, phrasing, formatting rules
   a model can follow while drafting a comment.
+- voiceMd must not restate the baseline. Where the corpus clearly contradicts
+  a baseline rule (the user really does open with praise, or use emoji or
+  exclamation points), add an explicit override to voiceMd; otherwise leave
+  the topic to the baseline.
 - prioritiesMd encodes level 3: what to hunt for (ranked by observed
   emphasis), the severity rubric as they actually apply it, and what they do
   not flag.

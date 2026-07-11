@@ -127,7 +127,10 @@ Emit `finding-verdict` for each.
 ### 5. draft — `models.voice`
 One call for all comments + summary (the voice model sees everything, so
 severity and tone stay consistent). Input: preamble, surviving findings with
-verification notes, and the **full contents of `preferences/voice.md`**.
+verification notes, the built-in anti-slop baseline
+(`server/src/pipeline/prompts/antislop.ts`), and the **full contents of
+`preferences/voice.md`** — voice rules override the baseline on conflict, so
+drafts read human by default and personal on top.
 Output (JSON): `{ comments: [{ findingId, severity, body }], summary,
 verdict: 'COMMENT'|'APPROVE'|'REQUEST_CHANGES' }`.
 
@@ -142,7 +145,8 @@ findings; APPROVE when nothing blocking and the PR is sound; else COMMENT.
 ## Per-comment chat (`server/src/chat/`)
 
 First message seeds a fresh session (`cwd = workdir`, read-only tools,
-`models.chat`) with: voice.md contents, the finding (claim, consequence,
+`models.chat`) with: the anti-slop baseline, voice.md contents, the finding
+(claim, consequence,
 evidence, verification), the hunk, the current comment body, and the
 instruction:
 

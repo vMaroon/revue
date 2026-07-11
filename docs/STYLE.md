@@ -4,7 +4,10 @@
 
 > Profile your public GitHub PR comments into evidence-backed voice and priorities files — proposed, reviewed, and only then applied.
 
-The pipeline's voice lives in `preferences/voice.md` and `preferences/priorities.md`.
+The pipeline's voice lives in `preferences/voice.md` and `preferences/priorities.md`,
+layered over a built-in anti-slop baseline (`server/src/pipeline/prompts/antislop.ts`)
+that keeps drafts free of machine-writing tells even when voice.md is missing
+or minimal; voice.md wins over the baseline where they conflict.
 Hand-writing those files means guessing at your own habits; the style bootstrap
 derives them from how you actually review. It scans your recent public PR
 comments, analyzes them on three levels, and proposes rewrites of both files.
@@ -64,7 +67,10 @@ The same call drafts `voiceMd` (levels 1–2) and `prioritiesMd` (level 3). The
 current files are treated as a hand-written baseline: rules the corpus is
 silent on survive, rules the corpus contradicts are revised (observed behavior
 wins), and strong observed habits the files lack are added. Every line must be
-a rule a model can follow while drafting, not a description of you.
+a rule a model can follow while drafting, not a description of you. The
+proposal never restates the built-in anti-slop baseline: where the corpus
+contradicts a baseline rule (you really do use emoji), voiceMd records an
+explicit override; topics the corpus is silent on stay with the baseline.
 
 **Apply** writes three files: `preferences/voice.md`, `preferences/priorities.md`
 (both through the same cache-busting writer the control page uses, so the next

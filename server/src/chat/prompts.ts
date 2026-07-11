@@ -4,6 +4,8 @@
 
 import type { DraftComment } from '@revue/shared';
 
+import { ANTISLOP_RULES } from '../pipeline/prompts/antislop';
+
 // Verbatim converge instruction from docs/PIPELINE.md, including the
 // <revised-comment> protocol the UI depends on for one-click apply.
 const CONVERGE_INSTRUCTION = `> You are helping the reviewer converge on this one comment before it is
@@ -68,6 +70,8 @@ export function buildSeedPrompt(
   userMessage: string,
 ): string {
   return [
+    '## Baseline writing rules',
+    ANTISLOP_RULES,
     '## Reviewer voice preferences (voice.md)',
     voiceMd.trim(),
     ...(learned.trim() !== '' ? ['## Learned corrections from past reviews', learned.trim()] : []),
