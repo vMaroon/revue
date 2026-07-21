@@ -25,6 +25,12 @@ const now = (): string => new Date().toISOString();
 
 const errMsg = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
+function formatFallbackBody(finding: Finding): string {
+  let body = `**${finding.severity}** (${finding.dimension}): ${finding.claim}\n\n${finding.consequence}`;
+  if (finding.suggestion) body += `\n\n**Suggestion:** ${finding.suggestion}`;
+  return body;
+}
+
 export function createPipelineRunner(): PipelineRunner {
   return { run };
 }
@@ -213,53 +219,89 @@ async function run(draft: ReviewDraft, deps: PipelineDeps): Promise<void> {
 
     // -- draft (voice) ---------------------------------------------------------
     setStage('draft', 'running');
-    const voice = await runJson(
-      deps.invoker,
-      {
-        model: config.models.voice,
-        prompt: buildVoicePrompt(preamble, surviving),
-        cwd: deps.workdir,
-        readOnly: true,
-        maxTurns: 1,
-        tag: 'voice',
-            onCost: addCost('draft'),
-      },
-      VoiceOut,
-      'VoiceOut',
-    );
+    try {
+      const voice = await runJson(
+        deps.invoker,
+        {
+          model: config.models.voice,
+          prompt: buildVoicePrompt(preamble, surviving),
+          cwd: deps.workdir,
+          readOnly: true,
+          maxTurns: 1,
+          tag: 'voice',
+              onCost: addCost('draft'),
+        },
+        VoiceOut,
+        'VoiceOut',
+      );
 
-    let materialized = 0;
-    for (const drafted of voice.comments) {
-      const finding = surviving.find((f) => f.id === drafted.findingId);
-      if (!finding) continue; // voice referenced a finding that did not survive
-      const anchor = deps.diff.validateAnchor(snapshot.files, finding.path, finding.line, finding.side);
-      const hunk = deps.diff.extractHunk(snapshot.files, finding.path, finding.line, finding.side);
-      const comment: DraftComment = {
-        id: `c-${randomUUID().slice(0, 8)}`,
-        path: finding.path,
-        line: finding.line,
-        side: finding.side,
-        ...(finding.startLine !== undefined ? { startLine: finding.startLine } : {}),
-        severity: drafted.severity,
-        body: drafted.body,
-        originalBody: drafted.body,
-        status: 'proposed',
-        origin: 'pipeline',
-        finding,
-        chat: [],
-        ...(hunk !== undefined ? { hunk } : {}),
-        anchor,
-        updatedAt: now(),
-      };
-      draft.comments.push(comment);
-      deps.emit({ type: 'comment', reviewId: draft.id, comment });
-      materialized++;
+      let materialized = 0;
+      for (const drafted of voice.comments) {
+        const finding = surviving.find((f) => f.id === drafted.findingId);
+        if (!finding) continue;
+        const anchor = deps.diff.validateAnchor(snapshot.files, finding.path, finding.line, finding.side);
+        const hunk = deps.diff.extractHunk(snapshot.files, finding.path, finding.line, finding.side);
+        const comment: DraftComment = {
+          id: `c-${randomUUID().slice(0, 8)}`,
+          path: finding.path,
+          line: finding.line,
+          side: finding.side,
+          ...(finding.startLine !== undefined ? { startLine: finding.startLine } : {}),
+          severity: drafted.severity,
+          body: drafted.body,
+          originalBody: drafted.body,
+          status: 'proposed',
+          origin: 'pipeline',
+          finding,
+          chat: [],
+          ...(hunk !== undefined ? { hunk } : {}),
+          anchor,
+          updatedAt: now(),
+        };
+        draft.comments.push(comment);
+        deps.emit({ type: 'comment', reviewId: draft.id, comment });
+        materialized++;
+      }
+      draft.summary = voice.summary;
+      draft.verdict = voice.verdict;
+      draft.status = 'ready';
+      save();
+      setStage('draft', 'done', `${materialized} comments`);
+    } catch (voiceErr) {
+      const message = errMsg(voiceErr);
+      elog('pipeline', `${draft.id} voice failed: ${message}; falling back to raw findings`);
+
+      for (const finding of surviving) {
+        const anchor = deps.diff.validateAnchor(snapshot.files, finding.path, finding.line, finding.side);
+        const hunk = deps.diff.extractHunk(snapshot.files, finding.path, finding.line, finding.side);
+        const body = formatFallbackBody(finding);
+        const comment: DraftComment = {
+          id: `c-${randomUUID().slice(0, 8)}`,
+          path: finding.path,
+          line: finding.line,
+          side: finding.side,
+          ...(finding.startLine !== undefined ? { startLine: finding.startLine } : {}),
+          severity: finding.severity,
+          body,
+          originalBody: body,
+          status: 'proposed',
+          origin: 'pipeline',
+          finding,
+          chat: [],
+          ...(hunk !== undefined ? { hunk } : {}),
+          anchor,
+          updatedAt: now(),
+        };
+        draft.comments.push(comment);
+        deps.emit({ type: 'comment', reviewId: draft.id, comment });
+      }
+
+      draft.summary = 'Voice stage failed; comments below are unpolished drafts from verified findings.';
+      draft.verdict = 'COMMENT';
+      draft.status = 'ready';
+      save();
+      setStage('draft', 'done', `voice failed; fell back to ${surviving.length} raw findings`);
     }
-    draft.summary = voice.summary;
-    draft.verdict = voice.verdict;
-    draft.status = 'ready';
-    save();
-    setStage('draft', 'done', `${materialized} comments`);
 
     deps.emit({ type: 'review', reviewId: draft.id, draft });
     deps.emit({ type: 'done', reviewId: draft.id });
