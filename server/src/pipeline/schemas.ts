@@ -3,6 +3,7 @@
 
 import { z } from 'zod';
 import type { AgentInvoker, AgentRunOptions } from '../interfaces';
+import { elog } from '../log';
 
 const SeveritySchema = z.enum(['blocking', 'suggestion', 'nit']);
 const SideSchema = z.enum(['LEFT', 'RIGHT']);
@@ -39,7 +40,10 @@ export const FinderOut = z.array(
 export type FinderOut = z.infer<typeof FinderOut>;
 
 export const VerifyOut = z.object({
-  verdict: z.enum(['CONFIRMED', 'REFUTED', 'UNCERTAIN']),
+  verdict: z.preprocess(
+    (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+    z.enum(['CONFIRMED', 'REFUTED', 'UNCERTAIN']),
+  ),
   notes: z.string(),
 });
 export type VerifyOut = z.infer<typeof VerifyOut>;
@@ -53,7 +57,10 @@ export const VoiceOut = z.object({
     }),
   ),
   summary: z.string(),
-  verdict: z.enum(['COMMENT', 'APPROVE', 'REQUEST_CHANGES']),
+  verdict: z.preprocess(
+    (val) => (typeof val === 'string' ? val.toUpperCase() : val),
+    z.enum(['COMMENT', 'APPROVE', 'REQUEST_CHANGES']),
+  ),
 });
 export type VoiceOut = z.infer<typeof VoiceOut>;
 
@@ -113,8 +120,10 @@ export async function runJson<T>(
 
   let prompt = opts.prompt + instruction;
   let lastError = '';
+  let lastRawText = '';
   for (let attempt = 0; attempt < 2; attempt++) {
     const { text } = await invoker.run({ ...opts, prompt });
+    lastRawText = text;
     const raw = extractJson(text);
     if (raw === undefined) {
       lastError = 'no JSON value found in the reply';
@@ -138,5 +147,6 @@ export async function runJson<T>(
       `\n\nYour previous reply was not valid ${schemaName} JSON: ${lastError}\n` +
       'Reply again with ONLY a JSON value matching the schema.';
   }
+  elog('runJson', `${schemaName} validation failed after 2 attempts: ${lastError}\nRaw response: ${lastRawText.slice(0, 500)}`);
   throw new Error(`agent did not produce valid ${schemaName} JSON: ${lastError}`);
 }
